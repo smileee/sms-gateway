@@ -1,0 +1,28 @@
+{
+  "name": "sms-gateway",
+  "version": "1.0.0",
+  "description": "SMS Gateway with HTTP API",
+  "main": "src/server/index.js",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "dev": "nodemon src/server/index.js",
+    "test": "node test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@serialport/parser-readline": "^10.5.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "lowdb": "^1.0.0",
+    "serialport": "^10.5.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
