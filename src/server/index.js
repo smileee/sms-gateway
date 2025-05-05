@@ -1,12 +1,29 @@
 // src/server/index.js
 const express = require('express');
+const cors = require('cors');
 const config = require('../config');
 const { log, error } = require('../utils/logger');
 const smsQueue = require('../sms/queue');
 const smsEncoder = require('../sms/encoding');
 
 const app = express();
+
+// Middleware
+app.use(cors());
 app.use(express.json());
+
+// Token authentication middleware
+const AUTH_TOKEN = 'sendeasy-sms-token-2024';
+const authMiddleware = (req, res, next) => {
+  const token = req.headers['x-auth-token'];
+  if (!token || token !== AUTH_TOKEN) {
+    return res.status(401).json({ ok: false, error: 'Invalid or missing token' });
+  }
+  next();
+};
+
+// Apply auth middleware to all routes
+app.use(authMiddleware);
 
 /**
  * Endpoint para envio de SMS único

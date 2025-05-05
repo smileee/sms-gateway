@@ -1,0 +1,144 @@
+{
+  "info": {
+    "name": "[SENDEASY] SMS Gateway",
+    "description": "Collection for testing the SMS Gateway API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "sendeasy-sms-token-2024",
+      "type": "string"
+    },
+    {
+      "key": "phone_number",
+      "value": "+17743010298",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Send Single SMS",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/sms",
+          "host": ["{{base_url}}"],
+          "path": ["sms"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"number\": \"{{phone_number}}\",\n    \"message\": \"A jornada de mil milhas inicia! Ação concluída com êxito 😊\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Send Bulk SMS",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/bulk-sms",
+          "host": ["{{base_url}}"],
+          "path": ["bulk-sms"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"messages\": [\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Bulk message 1\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Bulk message 2\"\n        }\n    ]\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Queue Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/queue",
+          "host": ["{{base_url}}"],
+          "path": ["queue"]
+        }
+      }
+    },
+    {
+      "name": "Get Sent Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/sent",
+          "host": ["{{base_url}}"],
+          "path": ["sent"]
+        }
+      }
+    },
+    {
+      "name": "Clear Queue",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/queue",
+          "host": ["{{base_url}}"],
+          "path": ["queue"]
+        }
+      }
+    },
+    {
+      "name": "Clear Sent History",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "x-auth-token",
+            "value": "{{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/sent",
+          "host": ["{{base_url}}"],
+          "path": ["sent"]
+        }
+      }
+    }
+  ]
+} 
