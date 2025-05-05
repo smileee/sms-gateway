@@ -1,3 +1,4 @@
+// src/config/queue.js
 const { Queue, Worker } = require('bullmq');
 const Redis = require('ioredis');
 const { logger } = require('../utils/logger');

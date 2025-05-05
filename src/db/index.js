@@ -1,3 +1,4 @@
+// src/db/index.js
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 const path = require('path');

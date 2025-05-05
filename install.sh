@@ -5,6 +5,7 @@ USER_HOME=$(eval echo ~$USER)
 
 # Create a directory for the driver if it doesn't exist
 DRIVER_DIR="$USER_HOME/SIM7600X-4G-HAT-Demo"
+HOME_DIR="$USER_HOME/sms-gateway"
 mkdir -p "$DRIVER_DIR"
 
 # Download and extract the driver
@@ -35,9 +36,10 @@ echo "Installation completed!"
 echo "Note: The sim7600_4G_hat_init command may not work, but this is normal."
 echo "The system will work correctly after the make process." 
 
-# Rename the folder to .Trash
-mv "$DRIVER_DIR" "$DRIVER_DIR/.Trash"
+# Rename the folder to .Trash in the home directory
+mv "$DRIVER_DIR" "$HOME_DIR/.Trash"
 
-# Create a new folder called .Trash
-mkdir "$DRIVER_DIR/.Trash"
+# Create a new folder called .Trash in the home directory
+mkdir "$HOME_DIR/.Trash"
+
 

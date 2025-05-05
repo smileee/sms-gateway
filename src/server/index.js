@@ -1,3 +1,4 @@
+// src/server/index.js
 const express = require('express');
 const config = require('../config');
 const { log, error } = require('../utils/logger');
@@ -7,7 +8,17 @@ const smsEncoder = require('../sms/encoding');
 const app = express();
 app.use(express.json());
 
-// Routes
+/**
+ * Endpoint para envio de SMS único
+ * @route POST /sms
+ * @param {Object} req.body - Corpo da requisição
+ * @param {string} req.body.number - Número do destinatário no formato internacional (ex: +5511999999999)
+ * @param {string} req.body.message - Mensagem a ser enviada
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {string} [res.id] - ID da mensagem na fila (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.post('/sms', async (req, res) => {
   try {
     const { number, message } = req.body;
@@ -26,6 +37,18 @@ app.post('/sms', async (req, res) => {
   }
 });
 
+/**
+ * Endpoint para envio em massa de SMS
+ * @route POST /bulk-sms
+ * @param {Object} req.body - Corpo da requisição
+ * @param {Array<Object>} req.body.messages - Lista de mensagens para envio
+ * @param {string} req.body.messages[].number - Número do destinatário
+ * @param {string} req.body.messages[].message - Mensagem a ser enviada
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {number} [res.queued] - Número de mensagens enfileiradas (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.post('/bulk-sms', async (req, res) => {
   try {
     const { messages } = req.body;
@@ -43,7 +66,14 @@ app.post('/bulk-sms', async (req, res) => {
   }
 });
 
-// New queue management endpoints
+/**
+ * Endpoint para consulta da fila de mensagens
+ * @route GET /queue
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {Array} [res.queue] - Lista de mensagens na fila (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.get('/queue', (req, res) => {
   try {
     const queue = smsQueue.getQueue();
@@ -54,6 +84,14 @@ app.get('/queue', (req, res) => {
   }
 });
 
+/**
+ * Endpoint para consulta de mensagens enviadas
+ * @route GET /sent
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {Array} [res.sent] - Lista de mensagens enviadas (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.get('/sent', (req, res) => {
   try {
     const sent = smsQueue.getSent();
@@ -64,6 +102,13 @@ app.get('/sent', (req, res) => {
   }
 });
 
+/**
+ * Endpoint para limpar a fila de mensagens
+ * @route DELETE /queue
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.delete('/queue', (req, res) => {
   try {
     smsQueue.clearQueue();
@@ -74,6 +119,13 @@ app.delete('/queue', (req, res) => {
   }
 });
 
+/**
+ * Endpoint para limpar o histórico de mensagens enviadas
+ * @route DELETE /sent
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
 app.delete('/sent', (req, res) => {
   try {
     smsQueue.clearSent();
@@ -84,7 +136,7 @@ app.delete('/sent', (req, res) => {
   }
 });
 
-// Error handling
+// Error handling middleware
 app.use((err, req, res, next) => {
   error('[SERVER ERROR]', err);
   res.status(500).json({ ok: false, error: 'Internal server error' });

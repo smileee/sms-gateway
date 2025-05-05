@@ -1,14 +1,26 @@
+// src/sms/queue.js
 const config = require('../config');
 const { log } = require('../utils/logger');
 const smsEncoder = require('./encoding');
 const serialManager = require('../modem/serial');
 const db = require('../db');
 
+/**
+ * Classe responsável pelo gerenciamento da fila de mensagens SMS
+ * Implementa um sistema de fila persistente usando lowdb para armazenamento
+ * e processamento sequencial de mensagens com retry em caso de falha
+ */
 class SMSQueue {
   constructor() {
     this.processing = false;
   }
 
+  /**
+   * Adiciona uma mensagem à fila de envio
+   * @param {string} number - Número do destinatário no formato internacional
+   * @param {string} message - Texto da mensagem a ser enviada
+   * @returns {string} ID único da mensagem na fila
+   */
   add(number, message) {
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const messageData = { number, message, id, status: 'pending', createdAt: new Date().toISOString() };
@@ -22,6 +34,13 @@ class SMSQueue {
     return id;
   }
 
+  /**
+   * Adiciona múltiplas mensagens à fila de envio
+   * @param {Array<Object>} messages - Lista de mensagens para envio
+   * @param {string} messages[].number - Número do destinatário
+   * @param {string} messages[].message - Texto da mensagem
+   * @returns {number} Quantidade de mensagens válidas adicionadas à fila
+   */
   addBulk(messages) {
     let added = 0;
     const validMessages = messages.filter(m => {
@@ -52,6 +71,12 @@ class SMSQueue {
     return added;
   }
 
+  /**
+   * Processa a fila de mensagens pendentes
+   * Executa o envio sequencial de mensagens com tratamento de erros
+   * e delays configuráveis entre tentativas
+   * @private
+   */
   async process() {
     if (this.processing) return;
     this.processing = true;
@@ -101,20 +126,35 @@ class SMSQueue {
     }
   }
 
-  // New methods for queue management
+  /**
+   * Retorna todas as mensagens na fila de envio
+   * @returns {Array<Object>} Lista de mensagens pendentes
+   */
   getQueue() {
     return db.get('queue').value();
   }
 
+  /**
+   * Retorna o histórico de mensagens enviadas
+   * @returns {Array<Object>} Lista de mensagens já enviadas
+   */
   getSent() {
     return db.get('sent').value();
   }
 
+  /**
+   * Limpa a fila de mensagens pendentes
+   * @returns {boolean} true se a operação foi bem sucedida
+   */
   clearQueue() {
     db.set('queue', []).write();
     return true;
   }
 
+  /**
+   * Limpa o histórico de mensagens enviadas
+   * @returns {boolean} true se a operação foi bem sucedida
+   */
   clearSent() {
     db.set('sent', []).write();
     return true;

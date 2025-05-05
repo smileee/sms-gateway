@@ -1,3 +1,4 @@
+// src/sms/encoding.js
 const config = require('../config');
 const { log } = require('../utils/logger');
 const atManager = require('../modem/commands');
