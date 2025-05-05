@@ -1,5 +1,5 @@
 // src/server.js
-const PROMPT_TIMEOUT = 10000;   // increased from 3500ms to 10000ms
+const PROMPT_TIMEOUT = 10000;
 
 function waitForPromptRaw(serial, timeout = PROMPT_TIMEOUT) {
   return new Promise((resolve, reject) => {
