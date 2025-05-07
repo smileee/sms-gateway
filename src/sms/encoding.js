@@ -17,17 +17,23 @@ class SMSEncoder {
   }
 
   needsUCS2(txt) {
-    return [...txt].some((ch) => ch.codePointAt(0) > 0x7f);
+    // Check for emojis and non-GSM characters
+    return [...txt].some((ch) => {
+      const code = ch.codePointAt(0);
+      return code > 0x7f || code === 0x20AC; // Euro symbol
+    });
   }
 
   async setUcs2() {
     await this.atManager.send('AT+CSCS="UCS2"');
     await this.atManager.send('AT+CSMP=17,167,0,8'); // DCS 0x08 (UCS‑2)
+    await this.serialManager.delay(500); // Give modem time to process
   }
 
   async setGsm7() {
     await this.atManager.send('AT+CSCS="GSM"');
     await this.atManager.send('AT+CSMP=17,167,0,0'); // DCS 0x00 (7‑bit default)
+    await this.serialManager.delay(500); // Give modem time to process
   }
 
   async sendSMS(number, message) {
@@ -35,8 +41,11 @@ class SMSEncoder {
 
     const { port, parser } = await this.serialManager.initialize();
     await this.atManager.ensureModemReady();
+    
+    // Reset modem state
     await this.atManager.send('AT+CMEE=2');
     await this.atManager.send('AT+CMGF=1');
+    await this.serialManager.delay(500);
 
     const useU = this.needsUCS2(message);
 
@@ -48,9 +57,18 @@ class SMSEncoder {
       const msgHex = this.toUCS2Hex(message);
       if (msgHex.length / 4 > 70) throw new Error('UCS2 > 70 chars');
 
+      // Send command and wait for prompt
       port.write(`AT+CMGS="${numHex}",145\r`);
-      await this.atManager.waitForPrompt();
+      await this.serialManager.delay(1000); // Simple delay instead of waiting for prompt
 
+      // Send message and CTRL+Z
+      port.write(msgHex);
+      port.drain(() => {
+        port.write(Buffer.from([26])); // CTRL+Z
+        port.drain(() => {});
+      });
+
+      // Wait for response
       await new Promise((resolve, reject) => {
         let buf = '';
         const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
@@ -66,11 +84,6 @@ class SMSEncoder {
         }
         parser.on('data', handler);
         log(`[SEND SMS] ${number} (UCS2)`);
-        port.write(msgHex);
-        port.drain(() => {
-          port.write(Buffer.from([26])); // CTRL+Z
-          port.drain(() => {});
-        });
       });
     } else {
       // ---------- GSM‑7 ----------
@@ -78,9 +91,18 @@ class SMSEncoder {
 
       await this.setGsm7();
 
+      // Send command and wait for prompt
       port.write(`AT+CMGS="${number}"\r`);
-      await this.atManager.waitForPrompt();
+      await this.serialManager.delay(1000); // Simple delay instead of waiting for prompt
 
+      // Send message and CTRL+Z
+      port.write(message);
+      port.drain(() => {
+        port.write(Buffer.from([26])); // CTRL+Z
+        port.drain(() => {});
+      });
+
+      // Wait for response
       await new Promise((resolve, reject) => {
         let buf = '';
         const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
@@ -96,11 +118,6 @@ class SMSEncoder {
         }
         parser.on('data', handler);
         log(`[SEND SMS] ${number}`);
-        port.write(message);
-        port.drain(() => {
-          port.write(Buffer.from([26])); // CTRL+Z
-          port.drain(() => {});
-        });
       });
     }
 
