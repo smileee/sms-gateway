@@ -56,7 +56,7 @@ class SMSEncoder {
         const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
         const handler = (d) => {
           buf += d;
-          if (/\+CMGS|\bOK\b/.test(buf)) return done();
+          if (/\+CMGS:\s*\d+/.test(buf)) return done();
           if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) return done(new Error(buf.trim()));
         };
         function done(err) {
@@ -67,7 +67,10 @@ class SMSEncoder {
         parser.on('data', handler);
         log(`[SEND SMS] ${number} (UCS2)`);
         port.write(msgHex);
-        port.drain(() => port.write(Buffer.from([26])));
+        port.drain(() => {
+          port.write(Buffer.from([26])); // CTRL+Z
+          port.drain(() => {});
+        });
       });
     } else {
       // ---------- GSM‑7 ----------
@@ -83,7 +86,7 @@ class SMSEncoder {
         const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
         const handler = (d) => {
           buf += d;
-          if (/\+CMGS|\bOK\b/.test(buf)) return done();
+          if (/\+CMGS:\s*\d+/.test(buf)) return done();
           if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) return done(new Error(buf.trim()));
         };
         function done(err) {
@@ -94,7 +97,10 @@ class SMSEncoder {
         parser.on('data', handler);
         log(`[SEND SMS] ${number}`);
         port.write(message);
-        port.drain(() => port.write(Buffer.from([26])));
+        port.drain(() => {
+          port.write(Buffer.from([26])); // CTRL+Z
+          port.drain(() => {});
+        });
       });
     }
 

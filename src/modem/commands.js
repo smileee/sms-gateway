@@ -61,16 +61,26 @@ class ATCommandManager {
       function onData(chunk) {
         if (!chunk) return;
 
-        if (chunk.includes(0x3e)) return cleanup();
         const chunkStr = chunk.toString('ascii');
         asciiBuf += chunkStr;
         
-        if (/(\+CMS ERROR:\s*\d+)/.test(asciiBuf))
+        // Check for prompt character (">")
+        if (chunkStr.includes('>')) {
+          return cleanup();
+        }
+        
+        // Check for errors
+        if (/(\+CMS ERROR:\s*\d+)/.test(asciiBuf)) {
           return cleanup(new Error(RegExp.$1.trim()));
-        if (asciiBuf.includes('ERROR'))
+        }
+        if (asciiBuf.includes('ERROR')) {
           return cleanup(new Error('Modem ERROR before prompt'));
+        }
 
-        if (asciiBuf.length > 256) asciiBuf = asciiBuf.slice(-256);
+        // Prevent buffer from growing too large
+        if (asciiBuf.length > 256) {
+          asciiBuf = asciiBuf.slice(-256);
+        }
       }
 
       function cleanup(err) {
