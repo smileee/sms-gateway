@@ -36,10 +36,10 @@ echo "Installation completed!"
 echo "Note: The sim7600_4G_hat_init command may not work, but this is normal."
 echo "The system will work correctly after the make process." 
 
-# Rename the folder to .Trash in the home directory
-mv "$DRIVER_DIR" "$HOME_DIR/.Trash"
+# Instaling nvm & node 20
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+nvm install 20
+nvm use 20
 
-# Create a new folder called .Trash in the home directory
-mkdir "$HOME_DIR/.Trash"
-
-
+# Install dependencies
+npm install
