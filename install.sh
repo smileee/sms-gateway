@@ -27,6 +27,8 @@ npm install -g pm2 yarn
 # Install dependencies
 yarn install
 
+# Minicom
+sudo apt install minicom
 
 # Create a directory for the driver if it doesn't exist
 mkdir -p "$DRIVER_DIR"
