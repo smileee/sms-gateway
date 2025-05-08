@@ -61,31 +61,10 @@ class SMSEncoder {
       const msgHex = this.toUCS2Hex(message);
       if (msgHex.length / 4 > 70) throw new Error('UCS2 > 70 chars');
 
-      // Send command and wait for prompt
+      // Send command and wait a bit
       log(`[SEND SMS] ${number} (UCS2)`);
       port.write(`AT+CMGS="${numHex}",145\r`);
-      
-      // Wait for prompt
-      await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Timeout waiting for prompt')), config.timeouts.prompt);
-        
-        const handler = (data) => {
-          const str = data.toString().trim();
-          log('[DEBUG] Received:', str);
-          
-          if (str.includes('>')) {
-            clearTimeout(timer);
-            parser.off('data', handler);
-            resolve();
-          } else if (str.includes('ERROR')) {
-            clearTimeout(timer);
-            parser.off('data', handler);
-            reject(new Error(str));
-          }
-        };
-        
-        parser.on('data', handler);
-      });
+      await this.serialManager.delay(2000); // Wait 2 seconds for prompt
 
       // Send message and CTRL+Z
       port.write(msgHex);
@@ -124,31 +103,10 @@ class SMSEncoder {
 
       await this.setGsm7();
 
-      // Send command and wait for prompt
+      // Send command and wait a bit
       log(`[SEND SMS] ${number}`);
       port.write(`AT+CMGS="${number}"\r`);
-      
-      // Wait for prompt
-      await new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Timeout waiting for prompt')), config.timeouts.prompt);
-        
-        const handler = (data) => {
-          const str = data.toString().trim();
-          log('[DEBUG] Received:', str);
-          
-          if (str.includes('>')) {
-            clearTimeout(timer);
-            parser.off('data', handler);
-            resolve();
-          } else if (str.includes('ERROR')) {
-            clearTimeout(timer);
-            parser.off('data', handler);
-            reject(new Error(str));
-          }
-        };
-        
-        parser.on('data', handler);
-      });
+      await this.serialManager.delay(2000); // Wait 2 seconds for prompt
 
       // Send message and CTRL+Z
       port.write(message);
