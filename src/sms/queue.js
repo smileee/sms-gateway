@@ -1,6 +1,7 @@
 // src/sms/queue.js
 const config = require('../config');
 const { log } = require('../utils/logger');
+const smsSender = require('./sender');
 const smsEncoder = require('./encoding');
 const serialManager = require('../modem/serial');
 const db = require('../db');
@@ -121,7 +122,11 @@ class SMSQueue {
 
       let ok = false;
       try {
-        await smsEncoder.sendSMS(number, text);
+        // Validate message length before sending
+        smsEncoder.validateMessage(text);
+        
+        // Send the message
+        await smsSender.sendSMS(number, text);
         log(`[QUEUE] Sent ${id} OK`);
         ok = true;
 
