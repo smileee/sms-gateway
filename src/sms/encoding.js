@@ -59,7 +59,38 @@ class SMSEncoder {
 
       // Send command and wait for prompt
       port.write(`AT+CMGS="${numHex}",145\r`);
-      await this.serialManager.delay(1000);
+      
+      // Wait for prompt with timeout
+      await new Promise((resolve, reject) => {
+        let buf = '';
+        const timer = setTimeout(() => {
+          log('[DEBUG] Response buffer before timeout:', buf);
+          done(new Error('Timeout waiting for prompt'));
+        }, config.timeouts.prompt);
+
+        const handler = (d) => {
+          const data = d.toString().trim();
+          log('[DEBUG] Received from modem:', data);
+          buf += data + '\n';
+          
+          if (data.includes('>')) {
+            log('[DEBUG] Got prompt');
+            return done();
+          }
+          
+          if (data.includes('ERROR') || data.includes('+CMS ERROR:')) {
+            return done(new Error(data));
+          }
+        };
+
+        function done(err) {
+          clearTimeout(timer);
+          parser.off('data', handler);
+          err ? reject(err) : resolve();
+        }
+
+        parser.on('data', handler);
+      });
 
       // Send message and CTRL+Z
       port.write(msgHex);
@@ -71,6 +102,9 @@ class SMSEncoder {
       // Wait for response with better logging
       await new Promise((resolve, reject) => {
         let buf = '';
+        let gotCMGS = false;
+        let gotOK = false;
+        
         const timer = setTimeout(() => {
           log('[DEBUG] Response buffer before timeout:', buf);
           done(new Error('SMS timeout'));
@@ -84,7 +118,8 @@ class SMSEncoder {
           // Check for success response
           if (data.includes('+CMGS:')) {
             log('[DEBUG] Got CMGS response:', data);
-            return done();
+            gotCMGS = true;
+            if (gotOK) return done();
           }
           // Check for error response
           if (data.includes('+CMS ERROR:') || data.includes('ERROR')) {
@@ -92,9 +127,10 @@ class SMSEncoder {
             return done(new Error(data));
           }
           // Check for OK after CMGS
-          if (data === 'OK' && buf.includes('+CMGS:')) {
-            log('[DEBUG] Got final OK');
-            return done();
+          if (data === 'OK') {
+            log('[DEBUG] Got OK');
+            gotOK = true;
+            if (gotCMGS) return done();
           }
         };
 
@@ -115,7 +151,38 @@ class SMSEncoder {
 
       // Send command and wait for prompt
       port.write(`AT+CMGS="${number}"\r`);
-      await this.serialManager.delay(1000);
+      
+      // Wait for prompt with timeout
+      await new Promise((resolve, reject) => {
+        let buf = '';
+        const timer = setTimeout(() => {
+          log('[DEBUG] Response buffer before timeout:', buf);
+          done(new Error('Timeout waiting for prompt'));
+        }, config.timeouts.prompt);
+
+        const handler = (d) => {
+          const data = d.toString().trim();
+          log('[DEBUG] Received from modem:', data);
+          buf += data + '\n';
+          
+          if (data.includes('>')) {
+            log('[DEBUG] Got prompt');
+            return done();
+          }
+          
+          if (data.includes('ERROR') || data.includes('+CMS ERROR:')) {
+            return done(new Error(data));
+          }
+        };
+
+        function done(err) {
+          clearTimeout(timer);
+          parser.off('data', handler);
+          err ? reject(err) : resolve();
+        }
+
+        parser.on('data', handler);
+      });
 
       // Send message and CTRL+Z
       port.write(message);
@@ -127,6 +194,9 @@ class SMSEncoder {
       // Wait for response with better logging
       await new Promise((resolve, reject) => {
         let buf = '';
+        let gotCMGS = false;
+        let gotOK = false;
+        
         const timer = setTimeout(() => {
           log('[DEBUG] Response buffer before timeout:', buf);
           done(new Error('SMS timeout'));
@@ -140,7 +210,8 @@ class SMSEncoder {
           // Check for success response
           if (data.includes('+CMGS:')) {
             log('[DEBUG] Got CMGS response:', data);
-            return done();
+            gotCMGS = true;
+            if (gotOK) return done();
           }
           // Check for error response
           if (data.includes('+CMS ERROR:') || data.includes('ERROR')) {
@@ -148,9 +219,10 @@ class SMSEncoder {
             return done(new Error(data));
           }
           // Check for OK after CMGS
-          if (data === 'OK' && buf.includes('+CMGS:')) {
-            log('[DEBUG] Got final OK');
-            return done();
+          if (data === 'OK') {
+            log('[DEBUG] Got OK');
+            gotOK = true;
+            if (gotCMGS) return done();
           }
         };
 
