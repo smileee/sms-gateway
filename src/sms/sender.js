@@ -23,19 +23,19 @@ class SMSSender {
     await this.serialManager.delay(1000);
     
     // Configure modem
-    await this.atManager.send('AT+CMEE=2');
-    await this.atManager.send('AT+CMGF=1');
-    await this.atManager.send('AT+CSMP=17,167,0,0');
+    await this.atManager.send('AT+CMEE=2'); // Enable error messages
+    await this.atManager.send('AT+CMGF=1'); // Set message format to text
+    await this.atManager.send('AT+CSMP=17,167,0,0'); // Set message type to text
     
     if (useUCS2) {
-      await this.atManager.send('AT+CSCS="UCS2"');
-      await this.atManager.send('AT+CSMP=17,167,0,8');
+      await this.atManager.send('AT+CSCS="UCS2"'); // Set character set to UCS2
+      await this.atManager.send('AT+CSMP=17,167,0,8'); // Set message type to UCS2
     }
     
     // Send SMS (expecting prompt '>')
     const dest = useUCS2 ? smsEncoder.toUCS2Hex(number) : number;
-    const command = `AT+CMGS="${dest}"`;
-    await this.atManager.send(command, '>');
+    const command = `AT+CMGS="${dest}"`; // Send SMS command
+    await this.atManager.send(command, '>'); // Send command and expect prompt
     
     // Pequeno atraso por segurança (o prompt já foi detectado pelo atManager)
     await this.serialManager.delay(200);

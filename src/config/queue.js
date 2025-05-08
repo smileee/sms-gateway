@@ -24,7 +24,7 @@ if (useQueue) {
       attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 1000
+        delay: 500
       },
       removeOnComplete: 100,
       removeOnFail: 1000
