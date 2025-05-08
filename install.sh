@@ -6,6 +6,29 @@ USER_HOME=$(eval echo ~$USER)
 # Create a directory for the driver if it doesn't exist
 DRIVER_DIR="$USER_HOME/SIM7600X-4G-HAT-Demo"
 HOME_DIR="$USER_HOME/sms-gateway"
+
+# Install nvm & Node.js 20 (LTS)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+
+# Load nvm into the current script so that the `nvm` command is available straight away
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Install and activate Node.js v20
+nvm install 20
+nvm use 20
+
+# Move to the project root to install dependencies
+cd "$HOME_DIR"
+
+# Install project dependencies and global tools
+npm install -g pm2 yarn
+
+# Install dependencies
+yarn install
+
+
+# Create a directory for the driver if it doesn't exist
 mkdir -p "$DRIVER_DIR"
 
 # Download and extract the driver
@@ -35,23 +58,3 @@ make
 echo "Installation completed!"
 echo "Note: The sim7600_4G_hat_init command may not work, but this is normal."
 echo "The system will work correctly after the make process." 
-
-# Install nvm & Node.js 20 (LTS)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-
-# Load nvm into the current script so that the `nvm` command is available straight away
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-# Install and activate Node.js v20
-nvm install 20
-nvm use 20
-
-# Move to the project root to install dependencies
-cd "$HOME_DIR"
-
-# Install project dependencies and global tools
-npm install -g pm2 yarn
-
-# Install dependencies
-yarn install
