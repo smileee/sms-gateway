@@ -32,58 +32,47 @@ class SMSSender {
       await this.atManager.send('AT+CSMP=17,167,0,8');
     }
     
-    // Send SMS
-    const command = `AT+CMGS="${number}"`;
-    await this.atManager.send(command);
+    // Send SMS (expecting prompt '>')
+    const dest = useUCS2 ? smsEncoder.toUCS2Hex(number) : number;
+    const command = `AT+CMGS="${dest}"`;
+    await this.atManager.send(command, '>');
     
-    // Wait a bit for the prompt
-    await this.serialManager.delay(2000);
+    // Pequeno atraso por segurança (o prompt já foi detectado pelo atManager)
+    await this.serialManager.delay(200);
     
     // Send message and CTRL+Z
     port.write(encoded + '\x1A');
     
     // Wait for response
     let buffer = '';
-    let gotResponse = false;
-    
-    const timeout = setTimeout(() => {
-      log('[DEBUG] Response buffer before timeout:', buffer);
-      throw new Error('SMS timeout');
-    }, config.timeouts.sms);
-    
-    parser.on('data', (data) => {
-      log('[DEBUG] Received:', data);
-      buffer += data;
-      
-      // Check for success response
-      if (buffer.includes('+CMGS:')) {
-        gotResponse = true;
-        clearTimeout(timeout);
-        parser.removeAllListeners('data');
-      }
-      
-      // Check for error response
-      if (buffer.includes('ERROR') || buffer.includes('CMS ERROR')) {
-        clearTimeout(timeout);
-        parser.removeAllListeners('data');
-        throw new Error('SMS send failed: ' + buffer.trim());
-      }
-    });
-    
-    // Wait for response or timeout
-    await new Promise((resolve, reject) => {
-      timeout.on('timeout', () => {
-        if (!gotResponse) {
-          reject(new Error('SMS timeout'));
-        } else {
-          resolve();
+    const response = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        log('[DEBUG] Response buffer before timeout:', buffer);
+        parser.off('data', onData);
+        reject(new Error('SMS timeout'));
+      }, config.timeouts.sms);
+
+      const onData = (data) => {
+        log('[DEBUG] Received:', data);
+        buffer += data;
+
+        if (buffer.includes('+CMGS:')) {
+          clearTimeout(timer);
+          parser.off('data', onData);
+          return resolve(buffer);
         }
-      });
+
+        if (buffer.includes('ERROR') || buffer.includes('CMS ERROR')) {
+          clearTimeout(timer);
+          parser.off('data', onData);
+          return reject(new Error(buffer.trim()));
+        }
+      };
+
+      parser.on('data', onData);
     });
-    
-    // Cleanup
-    parser.removeAllListeners('data');
-    clearTimeout(timeout);
+
+    log('[DEBUG] Final modem response:', response.trim());
     
     return true;
   }
