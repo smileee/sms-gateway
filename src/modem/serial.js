@@ -40,8 +40,15 @@ class SerialManager {
     this.parser = this.port.pipe(new ReadlineParser({ 
       delimiter: '\r\n', 
       encoding: 'ascii',
-      includeDelimiter: true
+      includeDelimiter: true,
+      autoDetect: true
     }));
+
+    // Add raw data listener for debugging
+    this.port.on('data', (data) => {
+      log('[DEBUG] Raw data from port:', data.toString('hex'));
+    });
+
     return { port: this.port, parser: this.parser };
   }
 

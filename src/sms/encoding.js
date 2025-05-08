@@ -59,7 +59,7 @@ class SMSEncoder {
 
       // Send command and wait for prompt
       port.write(`AT+CMGS="${numHex}",145\r`);
-      await this.serialManager.delay(1000); // Simple delay instead of waiting for prompt
+      await this.serialManager.delay(1000);
 
       // Send message and CTRL+Z
       port.write(msgHex);
@@ -68,20 +68,35 @@ class SMSEncoder {
         port.drain(() => {});
       });
 
-      // Wait for response
+      // Wait for response with better logging
       await new Promise((resolve, reject) => {
         let buf = '';
-        const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
+        const timer = setTimeout(() => {
+          log('[DEBUG] Response buffer before timeout:', buf);
+          done(new Error('SMS timeout'));
+        }, config.timeouts.sms);
+
         const handler = (d) => {
-          buf += d;
-          if (/\+CMGS:\s*\d+/.test(buf)) return done();
-          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) return done(new Error(buf.trim()));
+          const data = d.toString();
+          log('[DEBUG] Received from modem:', data);
+          buf += data;
+          
+          if (/\+CMGS:\s*\d+/.test(buf)) {
+            log('[DEBUG] Got CMGS response:', buf);
+            return done();
+          }
+          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) {
+            log('[DEBUG] Got error response:', buf);
+            return done(new Error(buf.trim()));
+          }
         };
+
         function done(err) {
           clearTimeout(timer);
           parser.off('data', handler);
           err ? reject(err) : resolve();
         }
+
         parser.on('data', handler);
         log(`[SEND SMS] ${number} (UCS2)`);
       });
@@ -93,7 +108,7 @@ class SMSEncoder {
 
       // Send command and wait for prompt
       port.write(`AT+CMGS="${number}"\r`);
-      await this.serialManager.delay(1000); // Simple delay instead of waiting for prompt
+      await this.serialManager.delay(1000);
 
       // Send message and CTRL+Z
       port.write(message);
@@ -102,20 +117,35 @@ class SMSEncoder {
         port.drain(() => {});
       });
 
-      // Wait for response
+      // Wait for response with better logging
       await new Promise((resolve, reject) => {
         let buf = '';
-        const timer = setTimeout(() => done(new Error('SMS timeout')), config.timeouts.sms);
+        const timer = setTimeout(() => {
+          log('[DEBUG] Response buffer before timeout:', buf);
+          done(new Error('SMS timeout'));
+        }, config.timeouts.sms);
+
         const handler = (d) => {
-          buf += d;
-          if (/\+CMGS:\s*\d+/.test(buf)) return done();
-          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) return done(new Error(buf.trim()));
+          const data = d.toString();
+          log('[DEBUG] Received from modem:', data);
+          buf += data;
+          
+          if (/\+CMGS:\s*\d+/.test(buf)) {
+            log('[DEBUG] Got CMGS response:', buf);
+            return done();
+          }
+          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) {
+            log('[DEBUG] Got error response:', buf);
+            return done(new Error(buf.trim()));
+          }
         };
+
         function done(err) {
           clearTimeout(timer);
           parser.off('data', handler);
           err ? reject(err) : resolve();
         }
+
         parser.on('data', handler);
         log(`[SEND SMS] ${number}`);
       });
