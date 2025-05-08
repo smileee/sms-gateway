@@ -25,11 +25,13 @@ class SMSSender {
     // Configure modem
     await this.atManager.send('AT+CMEE=2'); // Enable error messages
     await this.atManager.send('AT+CMGF=1'); // Set message format to text
-    await this.atManager.send('AT+CSMP=17,167,0,0'); // Set message type to text
+    // await this.atManager.send('AT+CSMP=17,167,0,0'); // Set message type to text
+    await this.atManager.send('AT+CSMP=17,23,64,244'); // The difference between the two is that the second one is for the new version of the modem
     
     if (useUCS2) {
       await this.atManager.send('AT+CSCS="UCS2"'); // Set character set to UCS2
-      await this.atManager.send('AT+CSMP=17,167,0,8'); // Set message type to UCS2
+      // await this.atManager.send('AT+CSMP=17,167,0,8'); // Set message type to UCS2
+      await this.atManager.send('AT+CSMP=17,23,64,244'); // The difference between the two is that the second one is for the new version of the modem
     }
     
     // Send SMS (expecting prompt '>')
