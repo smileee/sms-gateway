@@ -15,7 +15,7 @@ const config = {
     failureDelay: parseInt(process.env.FAILURE_DELAY, 10) || 2000,
     modemBoot: parseInt(process.env.MODEM_BOOT_DELAY, 10) || 1000,
     atCommand: parseInt(process.env.AT_COMMAND_TIMEOUT, 10) || 500,
-    sms: parseInt(process.env.SMS_TIMEOUT, 10) || 5000,
+    sms: parseInt(process.env.SMS_TIMEOUT, 10) || 1500,
     retryDelay: parseInt(process.env.RETRY_DELAY, 10) || 1000,
   },
   modem: {
