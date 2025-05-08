@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const config = require('../config');
 const { log, error } = require('../utils/logger');
-const smsQueue = require('../sms/queue');
+const smsQueue = require('../config/queue');
 const smsEncoder = require('../sms/encoding');
 
 const app = express();
@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // Token authentication middleware
-const AUTH_TOKEN = 'sendeasy-sms-token-2024';
+const AUTH_TOKEN = process.env.AUTH_TOKEN || 'sendeasy-sms-token-2024';
 const authMiddleware = (req, res, next) => {
   const token = req.headers['x-auth-token'];
   if (!token || token !== AUTH_TOKEN) {
