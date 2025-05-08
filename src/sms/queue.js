@@ -150,27 +150,7 @@ class SMSQueue {
       } catch (err) {
         log(`[QUEUE] Fail ${id}:`, err.message);
         
-        // Check if we should retry
-        if (retries < config.modem.maxRetries) {
-          log(`[QUEUE] Retrying ${id} (attempt ${retries + 1}/${config.modem.maxRetries})`);
-          
-          // Update retry count and status
-          db.get('queue')
-            .find({ id })
-            .assign({ 
-              status: 'pending',
-              retries: retries + 1,
-              lastError: err.message,
-              lastRetry: new Date().toISOString()
-            })
-            .write();
-            
-          // Wait before retry
-          await serialManager.delay(config.timeouts.retryDelay);
-          continue;
-        }
-        
-        // Max retries reached, mark as failed
+        // Marcar como falhou sem retries
         db.get('queue')
           .find({ id })
           .assign({ 
