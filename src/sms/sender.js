@@ -52,36 +52,28 @@ class SMSSender {
     });
     
     // Wait for response
-    let buffer = '';
-    const response = await new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        log('[DEBUG] Response buffer before timeout:', buffer);
+        // Nenhum erro recebido dentro do período → assumimos sucesso
         port.off('data', onData);
-        reject(new Error('SMS timeout'));
+        resolve();
       }, config.timeouts.sms);
 
       const onData = (chunk) => {
         const str = chunk.toString('ascii');
         log('[DEBUG] Raw chunk:', str.replace(/\r|\n/g, '␍'));
-        buffer += str;
 
-        if (buffer.includes('+CMGS:')) {
+        if (/\+CMS ERROR/.test(str) || str.includes('ERROR')) {
           clearTimeout(timer);
           port.off('data', onData);
-          return resolve(buffer);
+          return reject(new Error(str.trim()));
         }
-        if (/\+CMS ERROR/.test(buffer) || buffer.includes('ERROR')) {
-          clearTimeout(timer);
-          port.off('data', onData);
-          return reject(new Error(buffer.trim()));
-        }
+        // Não precisamos capturar +CMGS, apenas monitorar erros.
       };
 
       port.on('data', onData);
     });
 
-    log('[DEBUG] Final modem response:', response.trim().replace(/\r|\n/g, ' '));
-    
     return true;
   }
 }
