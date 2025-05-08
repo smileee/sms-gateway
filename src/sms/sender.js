@@ -56,31 +56,31 @@ class SMSSender {
     const response = await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         log('[DEBUG] Response buffer before timeout:', buffer);
-        parser.off('data', onData);
+        port.off('data', onData);
         reject(new Error('SMS timeout'));
       }, config.timeouts.sms);
 
-      const onData = (data) => {
-        log('[DEBUG] Received:', data);
-        buffer += data;
+      const onData = (chunk) => {
+        const str = chunk.toString('ascii');
+        log('[DEBUG] Raw chunk:', str.replace(/\r|\n/g, '␍'));
+        buffer += str;
 
         if (buffer.includes('+CMGS:')) {
           clearTimeout(timer);
-          parser.off('data', onData);
+          port.off('data', onData);
           return resolve(buffer);
         }
-
-        if (buffer.includes('ERROR') || buffer.includes('CMS ERROR')) {
+        if (/\+CMS ERROR/.test(buffer) || buffer.includes('ERROR')) {
           clearTimeout(timer);
-          parser.off('data', onData);
+          port.off('data', onData);
           return reject(new Error(buffer.trim()));
         }
       };
 
-      parser.on('data', onData);
+      port.on('data', onData);
     });
 
-    log('[DEBUG] Final modem response:', response.trim());
+    log('[DEBUG] Final modem response:', response.trim().replace(/\r|\n/g, ' '));
     
     return true;
   }
