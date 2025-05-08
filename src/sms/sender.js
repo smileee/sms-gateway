@@ -40,8 +40,16 @@ class SMSSender {
     // Pequeno atraso por segurança (o prompt já foi detectado pelo atManager)
     await this.serialManager.delay(200);
     
-    // Send message and CTRL+Z
-    port.write(encoded + '\x1A');
+    // Send message and CTRL+Z, then guarantee data flushed
+    await new Promise((resolve, reject) => {
+      port.write(encoded, 'ascii', (err) => {
+        if (err) return reject(err);
+        port.write(Buffer.from([26]), (err2) => {
+          if (err2) return reject(err2);
+          port.drain(resolve);
+        });
+      });
+    });
     
     // Wait for response
     let buffer = '';
