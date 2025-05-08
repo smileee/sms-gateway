@@ -77,17 +77,24 @@ class SMSEncoder {
         }, config.timeouts.sms);
 
         const handler = (d) => {
-          const data = d.toString();
+          const data = d.toString().trim();
           log('[DEBUG] Received from modem:', data);
-          buf += data;
+          buf += data + '\n';
           
-          if (/\+CMGS:\s*\d+/.test(buf)) {
-            log('[DEBUG] Got CMGS response:', buf);
+          // Check for success response
+          if (data.includes('+CMGS:')) {
+            log('[DEBUG] Got CMGS response:', data);
             return done();
           }
-          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) {
-            log('[DEBUG] Got error response:', buf);
-            return done(new Error(buf.trim()));
+          // Check for error response
+          if (data.includes('+CMS ERROR:') || data.includes('ERROR')) {
+            log('[DEBUG] Got error response:', data);
+            return done(new Error(data));
+          }
+          // Check for OK after CMGS
+          if (data === 'OK' && buf.includes('+CMGS:')) {
+            log('[DEBUG] Got final OK');
+            return done();
           }
         };
 
@@ -126,17 +133,24 @@ class SMSEncoder {
         }, config.timeouts.sms);
 
         const handler = (d) => {
-          const data = d.toString();
+          const data = d.toString().trim();
           log('[DEBUG] Received from modem:', data);
-          buf += data;
+          buf += data + '\n';
           
-          if (/\+CMGS:\s*\d+/.test(buf)) {
-            log('[DEBUG] Got CMGS response:', buf);
+          // Check for success response
+          if (data.includes('+CMGS:')) {
+            log('[DEBUG] Got CMGS response:', data);
             return done();
           }
-          if (/(\+CMS ERROR:.*|ERROR)/.test(buf)) {
-            log('[DEBUG] Got error response:', buf);
-            return done(new Error(buf.trim()));
+          // Check for error response
+          if (data.includes('+CMS ERROR:') || data.includes('ERROR')) {
+            log('[DEBUG] Got error response:', data);
+            return done(new Error(data));
+          }
+          // Check for OK after CMGS
+          if (data === 'OK' && buf.includes('+CMGS:')) {
+            log('[DEBUG] Got final OK');
+            return done();
           }
         };
 
