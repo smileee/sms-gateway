@@ -36,10 +36,17 @@ echo "Installation completed!"
 echo "Note: The sim7600_4G_hat_init command may not work, but this is normal."
 echo "The system will work correctly after the make process." 
 
-# Instaling nvm & node 20
+# Install nvm & Node.js 20 (LTS)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+
+# Load nvm into the current script so that the `nvm` command is available straight away
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Install and activate Node.js v20
 nvm install 20
 nvm use 20
 
-# Install dependencies
+# Return to the project root and install Node dependencies
+cd "$HOME_DIR"
 npm install
