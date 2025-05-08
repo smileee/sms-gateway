@@ -40,11 +40,15 @@ class SMSEncoder {
     if (!number || !message) throw new Error('Missing parameters');
 
     const { port, parser } = await this.serialManager.initialize();
-    await this.atManager.ensureModemReady();
     
-    // Reset modem state
-    await this.atManager.send('AT+CMEE=2');
-    await this.atManager.send('AT+CMGF=1');
+    // Reset modem to a known state
+    log('Initializing modem...');
+    await this.atManager.send('ATZ'); // Reset to default settings
+    await this.serialManager.delay(1000);
+    
+    await this.atManager.send('AT+CMEE=2'); // Enable detailed error reporting
+    await this.atManager.send('AT+CMGF=1'); // Set text mode
+    await this.atManager.send('AT+CSMP=17,167,0,0'); // Set default text mode parameters
     await this.serialManager.delay(500);
 
     const useU = this.needsUCS2(message);
