@@ -10,16 +10,18 @@ const config = {
     baudRate: parseInt(process.env.BAUD_RATE, 10) || 115200,
   },
   timeouts: {
-    prompt: parseInt(process.env.PROMPT_TIMEOUT, 10) || 3500,
-    successDelay: parseInt(process.env.SUCCESS_DELAY, 10) || 1500,
-    failureDelay: parseInt(process.env.FAILURE_DELAY, 10) || 10000,
-    modemBoot: parseInt(process.env.MODEM_BOOT_DELAY, 10) || 5000,
-    atCommand: parseInt(process.env.AT_COMMAND_TIMEOUT, 10) || 15000,
-    sms: parseInt(process.env.SMS_TIMEOUT, 10) || 60000,
+    prompt: parseInt(process.env.PROMPT_TIMEOUT, 10) || 5000,
+    successDelay: parseInt(process.env.SUCCESS_DELAY, 10) || 1000,
+    failureDelay: parseInt(process.env.FAILURE_DELAY, 10) || 5000,
+    modemBoot: parseInt(process.env.MODEM_BOOT_DELAY, 10) || 3000,
+    atCommand: parseInt(process.env.AT_COMMAND_TIMEOUT, 10) || 5000,
+    sms: parseInt(process.env.SMS_TIMEOUT, 10) || 15000,
+    retryDelay: parseInt(process.env.RETRY_DELAY, 10) || 2000,
   },
   modem: {
-    atAttempts: parseInt(process.env.MODEM_AT_ATTEMPTS, 10) || 2,
-    atDelay: parseInt(process.env.MODEM_AT_DELAY, 10) || 3000,
+    atAttempts: parseInt(process.env.MODEM_AT_ATTEMPTS, 10) || 3,
+    atDelay: parseInt(process.env.MODEM_AT_DELAY, 10) || 1000,
+    maxRetries: parseInt(process.env.MAX_RETRIES, 10) || 2,
   },
 };
 

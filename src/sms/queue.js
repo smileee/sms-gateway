@@ -116,8 +116,8 @@ class SMSQueue {
         break;
       }
 
-      const { number, message: text, id, priority, bulkIndex } = message;
-      log(`[QUEUE] Processing ${id} -> ${number} (${priority} priority)`);
+      const { number, message: text, id, priority, bulkIndex, retries = 0 } = message;
+      log(`[QUEUE] Processing ${id} -> ${number} (${priority} priority, attempt ${retries + 1})`);
 
       let ok = false;
       try {
@@ -145,10 +145,36 @@ class SMSQueue {
       } catch (err) {
         log(`[QUEUE] Fail ${id}:`, err.message);
         
-        // Update status to failed
+        // Check if we should retry
+        if (retries < config.modem.maxRetries) {
+          log(`[QUEUE] Retrying ${id} (attempt ${retries + 1}/${config.modem.maxRetries})`);
+          
+          // Update retry count and status
+          db.get('queue')
+            .find({ id })
+            .assign({ 
+              status: 'pending',
+              retries: retries + 1,
+              lastError: err.message,
+              lastRetry: new Date().toISOString()
+            })
+            .write();
+            
+          // Wait before retry
+          await serialManager.delay(config.timeouts.retryDelay);
+          continue;
+        }
+        
+        // Max retries reached, mark as failed
         db.get('queue')
           .find({ id })
-          .assign({ status: 'failed', error: err.message })
+          .assign({ 
+            status: 'failed', 
+            error: err.message,
+            retries: retries + 1,
+            lastError: err.message,
+            failedAt: new Date().toISOString()
+          })
           .write();
       }
 
