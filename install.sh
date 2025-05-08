@@ -47,6 +47,18 @@ export NVM_DIR="$HOME/.nvm"
 nvm install 20
 nvm use 20
 
+# Install dependencies
+npm install
+
+# Install pm2
+npm install -g pm2
+
+# Install Yarn
+npm install -g yarn
+
+# Install dependencies
+yarn install
+
 # Return to the project root and install Node dependencies
 cd "$HOME_DIR"
 npm install
