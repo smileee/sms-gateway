@@ -1,0 +1,119 @@
+npm run start
+
+> sms-gateway@1.0.0 start
+> node src/server/index.js
+
+2025-05-09 17:11:13.170 [info] SMS API server running on port 3000
+2025-05-09 17:11:13.184 [info] Serial port opened: /dev/ttyUSB3
+2025-05-09 17:11:13.186 [info] Waiting for modem to initialize...
+2025-05-09 17:11:14.190 [info] [INBOUND] Enabling SMS notifications (AT+CNMI)...
+2025-05-09 17:11:14.694 [info] [INBOUND] Serial port initialized for inbound listening
+2025-05-09 17:11:14.697 [info] [INBOUND] AT+CNMI command sent.
+2025-05-09 17:11:14.701 [info] [DEBUG] Raw data from port: AT+CNMI=2,1,0,0,0
+2025-05-09 17:11:14.712 [info] [DEBUG] Parser data: AT+CNMI=2,1,0,0,0
+
+2025-05-09 17:11:14.713 [info] [DEBUG] Parser data: OK
+
+2025-05-09 17:11:14.715 [info] [DEBUG] Raw data from port: 
+OK
+
+2025-05-09 17:11:20.037 [info] [QUEUE] Added realtime voice call rtcall-1746825080030-874z -> +17743010298
+2025-05-09 17:11:20.046 [info] [QUEUE] Processing rtcall-1746825080030-874z (Priority: call, Type: voice-realtime, Attempt: 1)
+2025-05-09 17:11:20.047 [info] [QUEUE] Processing realtime voice call rtcall-1746825080030-874z
+2025-05-09 17:11:20.048 [info] [VOICE-RT] Processando chamada realtime rtcall-1746825080030-874z para +17743010298
+2025-05-09 17:11:20.048 [info] [VOICE-RT] Iniciando chamada para: +17743010298
+2025-05-09 17:11:20.261 [info] [VOICE-RT] Enviando comando de discagem: ATD17743010298;
+2025-05-09 17:11:20.262 [info] [VOICE-RT] Aguardando atendimento...
+2025-05-09 17:11:20.264 [info] [VOICE-RT DEBUG] Atenção: Parser serial tem 2 listeners de 'data' ANTES de adicionar o de waitForCallStatus.
+2025-05-09 17:11:20.264 [info] [VOICE-RT DEBUG] Listener 0: (data) => {
+          const line = data.toString('ascii').trim();
+          if (line.startsWith('+CM...
+2025-05-09 17:11:20.265 [info] [VOICE-RT DEBUG] Listener 1: (data) => {
+      log('[DEBUG] Parser data:', data);
+    }...
+2025-05-09 17:11:20.267 [info] [DEBUG] Raw data from port: ATD17743010298;
+2025-05-09 17:11:20.346 [info] [DEBUG] Parser data: ATD17743010298;
+
+2025-05-09 17:11:20.347 [info] [VOICE-RT STATUS] Modem data: ATD17743010298;
+2025-05-09 17:11:20.348 [info] [DEBUG] Parser data: OK
+
+2025-05-09 17:11:20.348 [info] [VOICE-RT STATUS] Modem data: OK
+2025-05-09 17:11:20.349 [info] [DEBUG] Raw data from port: 
+OK
+
+2025-05-09 17:11:25.634 [info] [DEBUG] Parser data: 
+
+2025-05-09 17:11:25.637 [info] [DEBUG] Parser data: VOICE CALL: BEGIN
+
+2025-05-09 17:11:25.638 [info] [VOICE-RT STATUS] Modem data: VOICE CALL: BEGIN
+2025-05-09 17:11:25.639 [info] [DEBUG] Raw data from port: 
+VOICE CALL: BEGIN
+
+2025-05-09 17:11:25.640 [info] [VOICE-RT] Chamada atendida.
+2025-05-09 17:11:25.642 [info] [VOICE-RT] Conectando ao WebSocket: wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17
+2025-05-09 17:11:25.803 [info] [VOICE-RT] Chamada e WebSocket inicializados. Conversa em andamento...
+2025-05-09 17:11:38.653 [info] [VOICE-RT] WebSocket conectado.
+2025-05-09 17:11:38.662 [info] [VOICE-RT] Evento session.update enviado para configurar formatos de áudio e VAD.
+2025-05-09 17:11:38.664 [info] [VOICE-RT] Evento conversation.item.create enviado com instrução: "Olá! Esta é uma chamada de teste em tempo real."
+2025-05-09 17:11:38.665 [info] [VOICE-RT] Evento response.create enviado para IA começar a falar.
+2025-05-09 17:11:38.666 [info] [VOICE-RT] Iniciando streaming de áudio bidirecional (aplay e arecord).
+2025-05-09 17:11:38.711 [info] [VOICE-RT] Evento session.created recebido.
+2025-05-09 17:11:38.713 [error] [VOICE-RT] arecord stderr: Recording raw data 'stdin' : Signed 16 bit Little Endian, Rate 16000 Hz, Mono
+2025-05-09 17:11:38.842 [info] [VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.
+2025-05-09 17:11:38.966 [info] [VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.
+2025-05-09 17:11:39.092 [info] [VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.
+2025-05-09 17:11:39.216 [info] [VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.
+2025-05-09 17:11:39.341 [info] [VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.
+2025-05-09 17:11:39.448 [error] [VOICE-RT] Erro da API Realtime: undefined (Code: undefined, Event ID: event_BVPIJPilEpSoVp843Q5QA
+2025-05-09 17:11:49.490 [info] [VOICE-RT] WebSocket desconectado: 1000 - 
+2025-05-09 17:11:49.492 [info] [VOICE-RT] Parando streaming de áudio (aplay e arecord).
+2025-05-09 17:11:49.496 [error] [VOICE-RT] arecord stderr: Aborted by signal Terminated...
+arecord: pcm_read:2221: read error: Interrupted system call
+2025-05-09 17:11:49.509 [info] [VOICE-RT] Processo aplay encerrado: 0, sinal: null
+2025-05-09 17:11:49.513 [info] [VOICE-RT] Processo arecord encerrado: 1, sinal: null
+2025-05-09 17:11:55.149 [info] [DEBUG] Parser data: 
+
+2025-05-09 17:11:55.151 [info] [DEBUG] Parser data: VOICE CALL: END: 000030
+
+2025-05-09 17:11:55.153 [info] [VOICE-RT] Detectado fim de chamada pelo modem (VOICE CALL: END: 000030). Iniciando cleanup.
+2025-05-09 17:11:55.154 [info] [VOICE-RT] Listener de desligamento do modem removido.
+2025-05-09 17:11:55.156 [info] [VOICE-RT] Limpando recursos e desligando chamada...
+2025-05-09 17:11:55.157 [info] [VOICE-RT] Parando streaming de áudio (aplay e arecord).
+2025-05-09 17:11:55.159 [info] [VOICE-RT] Desligando chamada...
+2025-05-09 17:11:55.161 [info] [DEBUG] Raw data from port: 
+VOICE CALL: END: 000030
+
+2025-05-09 17:11:55.166 [info] [DEBUG] Parser data: 
+
+2025-05-09 17:11:55.168 [info] [RECV] 
+
+2025-05-09 17:11:55.169 [info] [DEBUG] Parser data: NO CARRIER
+
+2025-05-09 17:11:55.170 [info] [RECV] NO CARRIER
+
+2025-05-09 17:11:55.171 [info] [DEBUG] Raw data from port: 
+NO CARRIER
+
+2025-05-09 17:11:55.363 [info] [SEND] AT+CHUP
+2025-05-09 17:11:55.369 [info] [DEBUG] Raw data from port: AT+CHUP
+2025-05-09 17:11:55.373 [info] [DEBUG] Parser data: AT+CHUP
+
+2025-05-09 17:11:55.374 [info] [RECV] AT+CHUP
+
+2025-05-09 17:11:55.375 [info] [DEBUG] Parser data: OK
+
+2025-05-09 17:11:55.376 [info] [RECV] OK
+
+2025-05-09 17:11:55.377 [info] [DEBUG] Raw data from port: 
+OK
+
+2025-05-09 17:11:55.379 [info] [VOICE-RT DEBUG] Atenção: Parser serial tem 2 listeners de 'data' ANTES de adicionar o de waitForCallStatus.
+2025-05-09 17:11:55.380 [info] [VOICE-RT DEBUG] Listener 0: (data) => {
+          const line = data.toString('ascii').trim();
+          if (line.startsWith('+CM...
+2025-05-09 17:11:55.381 [info] [VOICE-RT DEBUG] Listener 1: (data) => {
+      log('[DEBUG] Parser data:', data);
+    }...
+2025-05-09 17:12:05.393 [info] [VOICE-RT] Timeout esperando confirmação de desligamento, mas continuando.
+2025-05-09 17:12:05.394 [info] [VOICE-RT] Chamada desligada via AT+CHUP.
+2025-05-09 17:12:05.395 [info] [VOICE-RT] Cleanup finalizado.
