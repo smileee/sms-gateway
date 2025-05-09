@@ -56,14 +56,24 @@ class VoiceRealtimeProcessor {
           return;
         }
 
-        if (evt.type === 'audio') {
-          // Espera base64 no campo data.audio
-          if (evt.data && evt.data.audio) {
-            const buff = Buffer.from(evt.data.audio, 'base64');
-            pcmBuffers.push(buff);
+        switch (evt.type) {
+          case 'audio': {
+            // Chunks base64 em evt.data.audio
+            if (evt.data && evt.data.audio) {
+              const buff = Buffer.from(evt.data.audio, 'base64');
+              pcmBuffers.push(buff);
+            }
+            break;
           }
-        } else if (evt.type === 'assistant_response_stop') {
-          ws.close();
+          // "audio_end" (ou "assistant_speech_stop") sinaliza fim definitivo do stream de áudio.
+          case 'audio_end':
+          case 'assistant_speech_stop': {
+            ws.close();
+            break;
+          }
+          // Ignorar outros tipos ou apenas logar se necessário
+          default:
+            break;
         }
       });
 
