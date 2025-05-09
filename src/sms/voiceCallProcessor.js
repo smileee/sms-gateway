@@ -82,10 +82,6 @@ class VoiceCallProcessor {
       log(`[VOICE] Reproduzindo áudio...`);
       await this.playAudio(audioPath);
       
-      // Passo 4: Desligar a chamada
-      log(`[VOICE] Finalizando chamada...`);
-      await this.hangupCall();
-      
       log(`[VOICE] Chamada ${id} concluída com sucesso.`);
       
       return true;
@@ -244,6 +240,12 @@ class VoiceCallProcessor {
       await execPromise(`aplay -D plughw:3,0 "${audioPath}"`, { timeout: 120000 });
       
       log(`[VOICE] Reprodução de áudio concluída`);
+      
+      // Aguarda um pequeno delay para garantir que o áudio foi completamente reproduzido
+      await serialManager.delay(500);
+      
+      // Encerra a chamada imediatamente após a reprodução
+      await this.hangupCall();
     } catch (e) {
       error(`[VOICE] Erro ao reproduzir áudio: ${e.message}`);
       throw e;
