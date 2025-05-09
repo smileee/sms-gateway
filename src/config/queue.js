@@ -5,6 +5,7 @@ const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
 const inboundProcessor = require('../sms/inboundProcessor');
+const voiceCallProcessor = require('../sms/voiceCallProcessor');
 const db = require('../db');
 
 /**
@@ -85,6 +86,33 @@ class SMSQueue {
   }
 
   /**
+   * Adiciona uma chamada de voz à fila de prioridade
+   * @param {string} number - Número do destinatário no formato internacional
+   * @param {string} text - Texto a ser convertido em áudio TTS
+   * @returns {string} ID único da chamada na fila
+   */
+  addVoiceCall(number, text) {
+    const id = `call-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const callData = {
+      id,
+      number,
+      text,
+      type: 'voice-tts',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      priority: config.priorities.CALL
+    };
+
+    db.get('queue')
+      .push(callData)
+      .write();
+
+    log(`[QUEUE] Added voice call ${id} -> ${number}`);
+    this.process();
+    return id;
+  }
+
+  /**
    * Processa a fila de mensagens pendentes
    * Executa o envio sequencial de mensagens com tratamento de erros
    * e delays configuráveis entre tentativas
@@ -110,7 +138,12 @@ class SMSQueue {
           .value();
       }
       
-      // Se não houver inbound, procura por outbound medium
+      // Se não houver inbound, procura por chamadas de voz (prioridade intermediária)
+      if (!message) {
+        message = db.get('queue').find({ status: 'pending', priority: config.priorities.CALL }).value();
+      }
+      
+      // Se não houver chamada de voz, procura por outbound medium
       if (!message) {
         message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM }).value();
       }
@@ -148,6 +181,22 @@ class SMSQueue {
           log(`[QUEUE] Retrying webhook for inbound SMS ${id}.`);
           await inboundProcessor.processReceivedSMS(message); // O processador lida com retries e status final
           ok = true; 
+        } else if (type === 'voice-tts') {
+          // Processar chamada de voz TTS
+          log(`[QUEUE] Processing voice call ${id} with TTS`);
+          await voiceCallProcessor.processVoiceCall(message);
+          
+          // Move para sent collection
+          db.get('queue').remove({ id }).write();
+          db.get('sent')
+            .push({
+              ...message,
+              status: 'completed',
+              completedAt: new Date().toISOString()
+            })
+            .write();
+            
+          ok = true;
         } else if (type === 'inbound') {
           // Mensagem inbound já processada (ex: webhook_sent_ok) ou em estado inesperado, ignorar.
           log(`[QUEUE] Skipping already processed or unexpected inbound state for ${id}: ${message.status}`);

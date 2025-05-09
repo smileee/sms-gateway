@@ -85,6 +85,39 @@ app.post('/bulk-sms', async (req, res) => {
 });
 
 /**
+ * Endpoint para realizar chamadas com TTS (Text-to-Speech)
+ * @route POST /voice-tts
+ * @param {Object} req.body - Corpo da requisição
+ * @param {string} req.body.number - Número do destinatário no formato internacional (ex: +5511999999999)
+ * @param {string} req.body.text - Texto a ser convertido em fala
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {string} [res.id] - ID da chamada na fila (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
+app.post('/voice-tts', async (req, res) => {
+  try {
+    const { number, text } = req.body;
+    if (!number || !text)
+      return res.status(400).json({ ok: false, error: 'number/text required' });
+
+    if (!config.openai.apiKey) {
+      return res.status(500).json({ ok: false, error: 'OpenAI API key not configured' });
+    }
+
+    if (text.length > 1000) {
+      return res.status(400).json({ ok: false, error: 'Text too long (max 1000 chars)' });
+    }
+
+    const id = smsQueue.addVoiceCall(number, text);
+    res.json({ ok: true, id });
+  } catch (e) {
+    error('[ERROR]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
  * Endpoint para consulta da fila de mensagens
  * @route GET /queue
  * @returns {Object} Resposta com status da operação
