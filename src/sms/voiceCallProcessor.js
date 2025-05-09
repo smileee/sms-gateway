@@ -125,10 +125,18 @@ class VoiceCallProcessor {
       // Limpar formatação do número (remover espaços, parênteses, etc.)
       const cleanedNumber = number.replace(/\s+/g, '');
       
+      // Fazer um flush no buffer para descartar dados pendentes que possam conter "NO CARRIER" residual
+      await new Promise((resolve, reject) => {
+        port.flush((err) => (err ? reject(err) : resolve()));
+      });
+
+      // Pequeno delay para garantir que o modem esteja pronto após o flush
+      await serialManager.delay(200);
+      
       // Enviar comando ATD (Dial) com o número - ESCRITA DIRETA NA PORTA
       // Nota: ATManager adiciona \r, mas vamos escrever diretamente para garantir \r
       const dialCommand = `ATD${cleanedNumber};\r`;
-      log(`[VOICE] Enviando comando de discagem diretamente: ${dialCommand.replace(/\r/g, '\\r')}`);
+      log(`[VOICE] Enviando comando de discagem diretamente: ${dialCommand}`);
       
       // Escrever diretamente na porta serial ao invés de usar atManager
       await new Promise((resolve, reject) => {

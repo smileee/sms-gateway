@@ -23,7 +23,7 @@ class SerialManager {
       dataBits: 8,
       stopBits: 1,
       parity: 'none',
-      rtscts: true,
+      rtscts: false, // Desabilita RTS/CTS - Serve para evitar problemas de handshake que são comuns em alguns modems e fazem com que o modem não responda
     });
 
     this.port.on('error', (err) => {
