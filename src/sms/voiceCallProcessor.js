@@ -35,14 +35,14 @@ class VoiceCallProcessor {
     log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
     
     try {
-      const mp3Response = await this.openai.audio.speech.create({
-        model: "gpt-4o-mini-tts",
-        voice: "coral", // Voz clara e natural
+      const speechResponse = await this.openai.audio.speech.create({
+        model: "tts-1", // Modelo oficial de TTS da OpenAI
+        voice: "alloy", // Voz padrão clara e natural
         input: text,
-        response_format: "wav", // Formato compatível com aplay
+        format: "wav", // Formato de saída compatível com aplay
       });
 
-      const buffer = Buffer.from(await mp3Response.arrayBuffer());
+      const buffer = Buffer.from(await speechResponse.arrayBuffer());
       await writeFile(outputPath, buffer);
       
       log(`[VOICE] Áudio TTS gerado com sucesso em: ${outputPath}`);
