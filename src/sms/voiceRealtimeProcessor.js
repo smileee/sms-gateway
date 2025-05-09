@@ -149,17 +149,18 @@ class VoiceRealtimeProcessor {
 
     this.ws.on('open', () => {
       log('[VOICE-RT] WebSocket conectado.');
-      // Configurar a sessão para áudio input/output
-      // Formato de áudio: PCM, 16kHz, 16-bit, mono (s16le)
       const sessionUpdateEvent = {
         type: 'session.update',
         session: {
+          // Documentação sugere que para input_audio_buffer.append, a API espera PCM.
+          // Para output, se quisermos PCM bruto, precisamos ser explícitos.
           input_audio_format: { encoding: 'pcm', sample_rate: 16000, bit_depth: 16, num_channels: 1 },
-          output_audio_format: { encoding: 'pcm', sample_rate: 16000, bit_depth: 16, num_channels: 1, container: 'none' }, // 'none' para raw PCM
-          // Habilitar VAD, mas não criar respostas automaticamente para termos mais controle
+          // Tentar especificar 'pcm_s16le' como formato de saída para maior clareza com aplay.
+          // E garantir que 'container' não seja necessário ou seja 'none' para PCM bruto.
+          output_audio_format: { encoding: 'pcm_s16le', sample_rate: 16000, num_channels: 1 }, // Removido bit_depth e container por enquanto, testar.
           turn_detection: {
-            create_response: false, // Nós enviaremos response.create
-            interrupt_response: true, // Permitir que a fala do usuário interrompa a IA
+            create_response: false, 
+            interrupt_response: true, 
           }
         },
       };
@@ -225,13 +226,20 @@ class VoiceRealtimeProcessor {
     switch (event.type) {
       case 'session.created':
         log('[VOICE-RT] Evento session.created recebido.');
+        // Após session.created, podemos enviar a configuração da sessão e o primeiro prompt.
+        // Movido o envio de session.update, conversation.item.create e response.create para cá ou para session.updated
+        // No entanto, a documentação diz que 'session.update' pode ser enviado a qualquer momento.
+        // Manter o fluxo atual por enquanto, mas estar ciente.
         break;
       case 'session.updated':
         log('[VOICE-RT] Evento session.updated recebido:', JSON.stringify(event.session));
+        // Se a atualização da sessão incluir os formatos de áudio, podemos iniciar o streaming de áudio aqui
+        // ou confirmar que os formatos estão corretos.
+        // O fluxo original de enviar a mensagem inicial após 'open' e 'session.update' parece razoável.
         break;
       case 'response.audio.delta':
         if (event.delta && this.aplayProcess && this.aplayProcess.stdin.writable) {
-          // log('[VOICE-RT] Recebendo audio.delta, enviando para aplay.');
+          log('[VOICE-RT] Recebendo audio.delta, enviando para aplay.');
           this.aplayProcess.stdin.write(Buffer.from(event.delta, 'base64'));
         }
         break;
@@ -300,7 +308,7 @@ class VoiceRealtimeProcessor {
     
     this.arecordProcess.stdout.on('data', (chunk) => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        // log('[VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.');
+        log('[VOICE-RT] Enviando chunk de áudio do arecord para OpenAI.');
         const base64Audio = chunk.toString('base64');
         const appendEvent = {
           type: 'input_audio_buffer.append',
