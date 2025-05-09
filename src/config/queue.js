@@ -158,9 +158,11 @@ class SMSQueue {
             error(`[QUEUE] Outbound message ${id} is missing number or text field. Skipping.`);
             // Remover da fila para evitar bloqueio
             db.get('queue').remove({ id }).write();
-            this.processing = false; // Para permitir que o próximo ciclo comece
-            this.process(); // Tenta processar a próxima
-            return; // Sai do loop atual
+            // this.processing = false; // Não resetar aqui, o loop while vai continuar
+            // this.process(); // Remover chamada recursiva
+            // return; // Remover return, deixar o loop continuar para a próxima mensagem
+            ok = true; // Considerar como "processado" para o delay e para continuar o loop
+            continue; // Pula para a próxima iteração do while loop
           }
           smsEncoder.validateMessage(text);
 
