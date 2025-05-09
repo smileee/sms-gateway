@@ -31,21 +31,13 @@ const config = {
   },
   priorities: {
     INBOUND_HIGH: 'inbound-high',
-    VOICE_CALL_HIGH: 'voice-call-high',
+    CALL: 'call',
     OUTBOUND_MEDIUM: 'outbound-medium',
     OUTBOUND_LOW: 'outbound-low',
   },
   openai: {
-    apiKey: (process.env.OPENAIKEY),
-    ttsModel: 'gpt-4o-mini-tts',
-    ttsVoice: 'coral',
-    audioFormat: 'mp3',
+    apiKey: process.env.OPENAI_API_KEY || '',
   },
-  audioPlayback: {
-    device: 'plughw:3,0',
-    tempAudioPath: './temp_audio',
-    playbackTimeoutMs: 60000,
-  }
 };
 
 module.exports = config; 
