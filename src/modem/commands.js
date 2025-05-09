@@ -174,6 +174,32 @@ class ATCommandManager {
     log(`[COMMANDS] Deleting SMS at index: ${index}, deleteAll: ${deleteAll}`);
     return this.enqueue(() => this._send(command, 'OK', config.timeouts.atCommand));
   }
+
+  /**
+   * Disca um número de telefone.
+   * ATENÇÃO: A resposta de ATD é complexa e pode não ser simplesmente 'OK'.
+   * Esta é uma implementação básica. Para produção, monitorar URCs como CONNECT, NO CARRIER é essencial.
+   * @param {string} number - O número de telefone a ser discado.
+   * @returns {Promise<string>} A resposta inicial do modem ao comando ATD.
+   */
+  async dial(number) {
+    const command = `ATD${number};`; // O ponto e vírgula é importante para chamadas de voz
+    log(`[COMMANDS] Dialing: ${command}`);
+    // Esperar 'OK' pode não ser o ideal aqui. Alguns modems retornam OK e depois URCs.
+    // Outros podem não retornar OK até a chamada terminar ou falhar.
+    // Para um teste inicial, vamos usar um timeout maior e esperar por OK, mas isso precisa ser revisto.
+    return this.enqueue(() => this._send(command, 'OK', config.timeouts.sms * 2)); // Timeout maior para discagem
+  }
+
+  /**
+   * Desliga a chamada ativa.
+   * @returns {Promise<string>} A resposta do modem (normalmente "OK").
+   */
+  async hangup() {
+    const command = 'ATH';
+    log(`[COMMANDS] Hanging up call: ${command}`);
+    return this.enqueue(() => this._send(command, 'OK', config.timeouts.atCommand));
+  }
 }
 
 module.exports = new ATCommandManager(); 

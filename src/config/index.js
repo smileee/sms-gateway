@@ -31,8 +31,20 @@ const config = {
   },
   priorities: {
     INBOUND_HIGH: 'inbound-high',
+    VOICE_CALL_HIGH: 'voice-call-high',
     OUTBOUND_MEDIUM: 'outbound-medium',
     OUTBOUND_LOW: 'outbound-low',
+  },
+  openai: {
+    apiKey: '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',
+    ttsModel: 'gpt-4o-mini-tts',
+    ttsVoice: 'coral',
+    audioFormat: 'mp3',
+  },
+  audioPlayback: {
+    device: 'plughw:3,0',
+    tempAudioPath: './temp_audio',
+    playbackTimeoutMs: 60000,
   }
 };
 

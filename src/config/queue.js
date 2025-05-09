@@ -5,6 +5,7 @@ const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
 const inboundProcessor = require('../sms/inboundProcessor');
+const voiceCallProcessor = require('../voice/voiceCallProcessor');
 const db = require('../db');
 
 /**
@@ -110,7 +111,40 @@ class SMSQueue {
           .value();
       }
       
-      // Se não houver inbound, procura por outbound medium
+      // Se não houver inbound, procura por VOICE_CALL_HIGH (nova lógica)
+      if (!message) {
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.VOICE_CALL_HIGH, status: 'pending_tts_generation' })
+          .value();
+      }
+      if (!message) { // Adicionar busca por outros status pendentes de voice call
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.VOICE_CALL_HIGH, status: 'pending_dial' })
+          .value();
+      }
+      if (!message) {
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.VOICE_CALL_HIGH, status: 'call_connected' })
+          .value();
+      }
+      if (!message) {
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.VOICE_CALL_HIGH, status: 'playback_complete' })
+          .value();
+      }
+      if (!message) {
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.VOICE_CALL_HIGH, status: 'playback_failed' })
+          .value();
+      }
+       // Fim da lógica de voice call, continua com outbound SMS
+      
+      // Se não houver voice call, procura por outbound medium
       if (!message) {
         message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM }).value();
       }
@@ -144,14 +178,18 @@ class SMSQueue {
           await inboundProcessor.processReceivedSMS(message);
           ok = true; 
         } else if (type === 'inbound' && message.status === 'webhook_send_failed') {
-          // Lógica para retry de webhook para inbound, se houver falha anterior
           log(`[QUEUE] Retrying webhook for inbound SMS ${id}.`);
-          await inboundProcessor.processReceivedSMS(message); // O processador lida com retries e status final
+          await inboundProcessor.processReceivedSMS(message);
           ok = true; 
         } else if (type === 'inbound') {
-          // Mensagem inbound já processada (ex: webhook_sent_ok) ou em estado inesperado, ignorar.
           log(`[QUEUE] Skipping already processed or unexpected inbound state for ${id}: ${message.status}`);
-          ok = true; // Considerar ok para não bloquear a fila
+          ok = true; 
+        } else if (type === 'voice_tts') { // Nova lógica para processar voice_tts
+          log(`[QUEUE] Delegating voice call task ${id} (status: ${message.status}) to VoiceCallProcessor.`);
+          await voiceCallProcessor.handleVoiceCall(message);
+          // O voiceCallProcessor é responsável por atualizar o status no DB ou remover da fila.
+          // Se ele mudar o status para outro 'pending_' state, a fila o pegará novamente.
+          ok = true;
         } else { // Processamento de mensagens outbound (lógica existente)
           // Assegurar que 'text' e 'number' existam para outbound, pois inbound não as terá diretamente no objeto message principal
           if (!text || !number) {
@@ -279,6 +317,31 @@ class SMSQueue {
       // O que fazer se a leitura ou deleção falhar? A mensagem pode ficar presa no SIM.
       // Poderíamos tentar adicionar à fila com um status de erro para retry manual/inspeção?
     }
+  }
+
+  /**
+   * Adiciona uma tarefa de chamada de voz com TTS à fila.
+   * @param {string} numberToCall - Número para o qual ligar.
+   * @param {string} textToSpeak - Texto a ser convertido em fala.
+   * @returns {string} ID único da tarefa na fila.
+   */
+  async addVoiceCall(numberToCall, textToSpeak) {
+    const id = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const callTask = {
+      id,
+      type: 'voice_tts',
+      numberToCall,
+      textToSpeak,
+      status: 'pending_tts_generation', // Estado inicial
+      priority: config.priorities.VOICE_CALL_HIGH,
+      createdAt: new Date().toISOString(),
+      retries: 0,
+    };
+
+    db.get('queue').push(callTask).write();
+    log(`[QUEUE] Added voice call task ${id} for ${numberToCall}`);
+    this.process(); // Aciona o processamento da fila
+    return id;
   }
 }
 

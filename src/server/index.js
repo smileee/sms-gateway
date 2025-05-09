@@ -154,6 +154,35 @@ app.delete('/sent', (req, res) => {
   }
 });
 
+/**
+ * Endpoint para TTS e chamada de voz
+ * @route POST /voice-tts
+ * @param {Object} req.body - Corpo da requisição
+ * @param {string} req.body.number - Número para o qual ligar
+ * @param {string} req.body.text - Texto a ser convertido em fala
+ * @returns {Object} Resposta com status da operação
+ */
+app.post('/voice-tts', async (req, res) => {
+  try {
+    const { number, text } = req.body;
+    if (!number || !text) {
+      return res.status(400).json({ ok: false, error: 'number and text are required' });
+    }
+    if (typeof number !== 'string' || typeof text !== 'string') {
+      return res.status(400).json({ ok: false, error: 'number and text must be strings' });
+    }
+    if (text.length > 1000) { // Limite arbitrário para o texto do TTS
+        return res.status(400).json({ ok: false, error: 'Text too long, max 1000 chars' });
+    }
+
+    const id = await smsQueue.addVoiceCall(number, text);
+    res.json({ ok: true, id, message: 'Voice call task queued' });
+  } catch (e) {
+    error('[ERROR /voice-tts]', e.message, e.stack);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   error('[SERVER ERROR]', err);
