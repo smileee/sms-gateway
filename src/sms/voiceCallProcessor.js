@@ -35,14 +35,14 @@ class VoiceCallProcessor {
     log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
     
     try {
-      const speechResponse = await this.openai.audio.speech.create({
-        model: "tts-1", // Modelo oficial de TTS da OpenAI
-        voice: "alloy", // Voz padrão clara e natural
+      const mp3Response = await this.openai.audio.speech.create({
+        model: "gpt-4o-mini-tts",
+        voice: "coral", // Voz clara e natural
         input: text,
-        format: "wav", // Formato de saída compatível com aplay
+        response_format: "wav", // Formato compatível com aplay
       });
 
-      const buffer = Buffer.from(await speechResponse.arrayBuffer());
+      const buffer = Buffer.from(await mp3Response.arrayBuffer());
       await writeFile(outputPath, buffer);
       
       log(`[VOICE] Áudio TTS gerado com sucesso em: ${outputPath}`);
@@ -238,46 +238,10 @@ class VoiceCallProcessor {
       if (!fs.existsSync(audioPath)) {
         throw new Error(`Arquivo de áudio não encontrado: ${audioPath}`);
       }
-      try {
-        const stats = fs.statSync(audioPath);
-        log(`[VOICE] Tamanho do arquivo WAV antes de tocar: ${stats.size} bytes`);
-      } catch (e) {
-        error('[VOICE] Erro ao obter tamanho do arquivo WAV antes de tocar:', e.message);
-      }
       
       // Reproduz o áudio usando aplay na porta CM108 (3)
       log(`[VOICE] Reproduzindo áudio: ${audioPath}`);
-      
-      // Modificado para capturar stdout e stderr do aplay
-      await new Promise((resolve, reject) => {
-        const playProcess = exec(`aplay -D plughw:3,0 "${audioPath}"`, { timeout: 120000 });
-        let playStdout = '';
-        let playStderr = '';
-
-        playProcess.stdout.on('data', (data) => {
-          playStdout += data;
-          log(`[VOICE] aplay stdout: ${data}`.trim());
-        });
-
-        playProcess.stderr.on('data', (data) => {
-          playStderr += data;
-          error(`[VOICE] aplay stderr: ${data}`.trim());
-        });
-
-        playProcess.on('close', (code) => {
-          log(`[VOICE] aplay finalizou com código: ${code}`);
-          if (playStderr && code !== 0) { // Considerar erro se houver stderr e código não for 0
-            reject(new Error(`aplay exited with code ${code}. Stderr: ${playStderr}`));
-          } else {
-            resolve();
-          }
-        });
-
-        playProcess.on('error', (err) => {
-          error(`[VOICE] Falha ao iniciar aplay: ${err.message}`);
-          reject(err);
-        });
-      });
+      await execPromise(`aplay -D plughw:3,0 "${audioPath}"`, { timeout: 120000 });
       
       log(`[VOICE] Reprodução de áudio concluída`);
       
