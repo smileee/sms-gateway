@@ -32,8 +32,7 @@ class VoiceRealtimeProcessor {
     log(`[VOICE-RT] Iniciando chamada para: ${number}`);
     const { port } = await serialManager.initialize();
     const cleanedNumber = number.replace(/[^0-9]/g, '');
-    const dialCommand = `ATD${cleanedNumber};
-`;
+    const dialCommand = `ATD${cleanedNumber};\r`;
 
     await new Promise((resolve, reject) => port.flush(err => err ? reject(err) : resolve()));
     await serialManager.delay(200);
@@ -79,6 +78,12 @@ class VoiceRealtimeProcessor {
   waitForCallStatus(statusToWaitFor, timeout = 30000) {
     const { parser } = serialManager;
     if (!parser) return Promise.reject(new Error('Parser serial não inicializado'));
+
+    // Limpar outros listeners de dados temporariamente para teste
+    // CUIDADO: Isso pode afetar outras partes do sistema (ex: inbound SMS)
+    // Apenas para diagnóstico.
+    log('[VOICE-RT DEBUG] Removendo todos os listeners de dados do parser serial antes de adicionar o nosso.');
+    parser.removeAllListeners('data'); 
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
