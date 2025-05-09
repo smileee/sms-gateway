@@ -79,11 +79,15 @@ class VoiceRealtimeProcessor {
     const { parser } = serialManager;
     if (!parser) return Promise.reject(new Error('Parser serial não inicializado'));
 
-    // Limpar outros listeners de dados temporariamente para teste
-    // CUIDADO: Isso pode afetar outras partes do sistema (ex: inbound SMS)
-    // Apenas para diagnóstico.
-    log('[VOICE-RT DEBUG] Removendo todos os listeners de dados do parser serial antes de adicionar o nosso.');
-    parser.removeAllListeners('data'); 
+    // DIAGNÓSTICO: Verificar se há outros listeners
+    const existingListeners = parser.listeners('data');
+    if (existingListeners && existingListeners.length > 1) { // > 1 porque o nosso será um deles
+        log(`[VOICE-RT DEBUG] Atenção: Parser serial tem ${existingListeners.length} listeners de 'data' ANTES de adicionar o de waitForCallStatus.`);
+        existingListeners.forEach((listener, index) => {
+            log(`[VOICE-RT DEBUG] Listener ${index}: ${listener.toString().substring(0, 100)}...`);
+        });
+    }
+    // REMOVIDO POR ENQUANTO: parser.removeAllListeners('data'); 
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
