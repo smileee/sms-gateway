@@ -112,14 +112,14 @@ class SMSQueue {
       
       // Se não houver inbound, procura por outbound medium
       if (!message) {
-        message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM, type: undefined }).value();
+        message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM }).value();
       }
       
       // Se não houver outbound medium, continua com a fila bulk (outbound low)
       if (!message) {
         message = db
           .get('queue')
-          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, type: undefined, bulkIndex: this.currentBulkIndex })
+          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, bulkIndex: this.currentBulkIndex })
           .value();
       }
 
