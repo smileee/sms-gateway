@@ -258,9 +258,9 @@ class VoiceCallProcessor {
    */
   async hangupCall() {
     try {
-      // Enviar comando ATH (Hangup)
+      // Enviar comando AT+CHUP (Hangup) - mais confiável que ATH
       log(`[VOICE] Desligando chamada...`);
-      await atManager.send('ATH', 'OK');
+      await atManager.send('AT+CHUP', 'OK');
       
       // Esperar realmente encerrar
       await this.waitForCallStatus('END', 5000).catch(() => {
