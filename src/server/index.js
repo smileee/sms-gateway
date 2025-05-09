@@ -97,7 +97,7 @@ app.post('/bulk-sms', async (req, res) => {
  */
 app.post('/voice-tts', async (req, res) => {
   try {
-    const { number, text } = req.body;
+    const { number, text, voice } = req.body;
     if (!number || !text)
       return res.status(400).json({ ok: false, error: 'number/text required' });
 
@@ -109,7 +109,7 @@ app.post('/voice-tts', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Text too long (max 1000 chars)' });
     }
 
-    const id = smsQueue.addVoiceCall(number, text);
+    const id = smsQueue.addVoiceCall(number, text, voice);
     res.json({ ok: true, id });
   } catch (e) {
     error('[ERROR]', e.message);
