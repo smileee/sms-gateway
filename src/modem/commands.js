@@ -124,6 +124,52 @@ class ATCommandManager {
     }
     throw new Error('Modem not responding');
   }
+
+  /**
+   * Lê uma mensagem SMS do modem.
+   * @param {number} index - O índice da mensagem a ser lida.
+   * @param {string} [expectedPromptAfterCmgr] - O que esperar após o corpo da mensagem (normalmente OK).
+   * @returns {Promise<string>} A resposta completa do modem para AT+CMGR.
+   */
+  async readSMS(index, expectedPromptAfterCmgr = 'OK') {
+    // Garante que o modem esteja no modo texto para facilitar o parse
+    // Esta linha pode ser redundante se o modem já estiver configurado globalmente
+    // await this.send('AT+CMGF=1'); 
+    // O sender.js já configura AT+CMGF=1, então geralmente é seguro assumir.
+
+    const command = `AT+CMGR=${index}`;
+    // A resposta de AT+CMGR é multi-linha. O _send padrão espera uma única linha de "expect".
+    // Precisamos de uma lógica que capture múltiplas linhas até o "OK" final ou um erro.
+    // Para simplificar, vamos modificar temporariamente _send ou criar um _sendMultiLine.
+    // Por ora, vamos tentar com o _send e ver como ele lida, e se o 'OK' é o terminador.
+    // A resposta típica é: 
+    // +CMGR: "STATUS","OA/DA","","TP-SCTS"
+    // <data>
+    // OK
+    // Ou: ERROR
+    // O _send atual pode funcionar se o 'OK' for a última coisa após os dados.
+    // O problema é que o 'OK' pode vir depois de um CR LF e dados. O parser atual do _send
+    // pode não capturar tudo. 
+    // Uma solução mais robusta seria ter uma função _sendCommandAndWaitForPattern que acumula
+    // dados até um padrão final, ignorando os delimitadores de linha do parser para o 'expect'.
+    log(`[COMMANDS] Reading SMS at index: ${index}`);
+    return this.enqueue(() => this._send(command, expectedPromptAfterCmgr, config.timeouts.sms)); 
+    // Aumentei o timeout para SMS, pois a leitura pode levar mais tempo.
+  }
+
+  /**
+   * Deleta uma mensagem SMS do modem.
+   * @param {number} index - O índice da mensagem a ser deletada.
+   * @param {boolean} [deleteAll=false] - Se true, deleta todas as mensagens (usando flag diferente no AT+CMGD).
+   * @returns {Promise<string>} A resposta do modem (normalmente "OK").
+   */
+  async deleteSMS(index, deleteAll = false) {
+    // AT+CMGD=<index>[,<delflag>]  <delflag> 0 (default) ou 1,2,3,4
+    // Para deletar uma mensagem específica, delflag não é estritamente necessário ou pode ser 0.
+    const command = deleteAll ? 'AT+CMGD=1,4' : `AT+CMGD=${index}`;
+    log(`[COMMANDS] Deleting SMS at index: ${index}, deleteAll: ${deleteAll}`);
+    return this.enqueue(() => this._send(command, 'OK', config.timeouts.atCommand));
+  }
 }
 
 module.exports = new ATCommandManager(); 

@@ -1,8 +1,10 @@
 const config = require('../config');
-const { log } = require('../utils/logger');
+const { log, error } = require('../utils/logger');
 const smsSender = require('../sms/sender');
 const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
+const atManager = require('../modem/commands');
+const inboundProcessor = require('../sms/inboundProcessor');
 const db = require('../db');
 
 /**
@@ -31,7 +33,7 @@ class SMSQueue {
       id,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      priority: 'high' // Marca como mensagem prioritária
+      priority: config.priorities.OUTBOUND_MEDIUM // Atualizado para prioridade média
     };
 
     db.get('queue')
@@ -68,7 +70,7 @@ class SMSQueue {
       id: `msg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      priority: 'low', // Marca como mensagem bulk
+      priority: config.priorities.OUTBOUND_LOW, // Atualizado para prioridade baixa
       bulkIndex: i // Mantém o índice original na fila bulk
     }));
 
@@ -94,54 +96,72 @@ class SMSQueue {
     this.processing = true;
 
     while (true) {
-      // Primeiro procura por mensagens prioritárias
-      let message = db.get('queue').find({ status: 'pending', priority: 'high' }).value();
+      // Primeiro procura por mensagens prioritárias inbound
+      let message = db.get('queue').find({ status: 'pending', priority: config.priorities.INBOUND_HIGH }).value();
 
-      // Se não houver mensagens prioritárias, continua com a fila bulk
+      // Se não houver inbound, procura por outbound medium
+      if (!message) {
+        message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM }).value();
+      }
+      
+      // Se não houver outbound medium, continua com a fila bulk (outbound low)
       if (!message) {
         message = db
           .get('queue')
-          .find({ status: 'pending', priority: 'low', bulkIndex: this.currentBulkIndex })
+          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, bulkIndex: this.currentBulkIndex })
           .value();
       }
 
       if (!message) {
-        // Se não encontrou mensagem no índice atual, reinicia o índice
-        if (this.currentBulkIndex > 0) {
+        // Se não encontrou mensagem no índice atual, reinicia o índice para bulk
+        if (this.currentBulkIndex > 0 && 
+            !db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW }).value()) {
           this.currentBulkIndex = 0;
-          continue;
+          // continue; // Removido para evitar loop infinito se só houver bulk e o índice for resetado
         }
         this.processing = false;
         break;
       }
 
-      const { number, message: text, id, priority, bulkIndex, retries = 0 } = message;
-      log(`[QUEUE] Processing ${id} -> ${number} (${priority} priority, attempt ${retries + 1})`);
+      const { number, message: text, id, priority, bulkIndex, retries = 0, type, rawData } = message;
+      log(`[QUEUE] Processing ${id} (Priority: ${priority}, Type: ${type || 'outbound'}, Attempt: ${retries + 1})`);
 
       let ok = false;
       try {
-        // Validate message length before sending
-        smsEncoder.validateMessage(text);
+        if (type === 'inbound' && message.status === 'received_raw') {
+          log(`[QUEUE] Delegating inbound SMS ${id} to InboundProcessor.`);
+          await inboundProcessor.processReceivedSMS(message);
+          // O inboundProcessor será responsável por atualizar o status no DB (e mover para 'sent' ou outra coleção)
+          // Por agora, consideramos 'ok' para que o delay seja o de sucesso.
+          // A remoção da fila principal ou atualização de status será feita pelo inboundProcessor.
+          ok = true; 
+        } else if (type === 'inbound') {
+          // Mensagem inbound já processada ou em estado inesperado, ignorar por enquanto.
+          log(`[QUEUE] Skipping already processed or unexpected inbound state for ${id}: ${message.status}`);
+          ok = true; // Considerar ok para não bloquear a fila
+        } else { // Processamento de mensagens outbound (lógica existente)
+          // Validate message length before sending
+          smsEncoder.validateMessage(text);
 
-        // Send the message
-        await smsSender.sendSMS(number, text);
-        log(`[QUEUE] Sent ${id} OK`);
-        ok = true;
+          // Send the message
+          await smsSender.sendSMS(number, text);
+          log(`[QUEUE] Sent ${id} OK`);
+          ok = true;
 
-        // Move to sent messages
-        db.get('queue').remove({ id }).write();
+          // Move to sent messages
+          db.get('queue').remove({ id }).write();
+          db.get('sent')
+            .push({
+              ...message,
+              status: 'sent',
+              sentAt: new Date().toISOString()
+            })
+            .write();
 
-        db.get('sent')
-          .push({
-            ...message,
-            status: 'sent',
-            sentAt: new Date().toISOString()
-          })
-          .write();
-
-        // Atualiza o índice da fila bulk se necessário
-        if (priority === 'low' && bulkIndex !== undefined) {
-          this.currentBulkIndex = bulkIndex + 1;
+          // Atualiza o índice da fila bulk se necessário
+          if (priority === config.priorities.OUTBOUND_LOW && bulkIndex !== undefined) {
+            this.currentBulkIndex = bulkIndex + 1;
+          }
         }
       } catch (err) {
         log(`[QUEUE] Fail ${id}:`, err.message);
@@ -196,6 +216,46 @@ class SMSQueue {
   clearSent() {
     db.set('sent', []).write();
     return true;
+  }
+
+  /**
+   * Manipula um evento de SMS recebido detectado pelo SerialManager.
+   * Lê a mensagem, adiciona à fila e a deleta do modem.
+   * @param {number} index - O índice da mensagem no modem.
+   * @param {string} memory - A memória onde a mensagem foi recebida (ex: "SM").
+   */
+  async handleIncomingSMSEvent(index, memory) {
+    log(`[QUEUE INBOUND] Handling incoming SMS event: index ${index}, memory '${memory}'`);
+    try {
+      const rawMessageData = await atManager.readSMS(index);
+      log(`[QUEUE INBOUND] SMS raw data at index ${index}:`, rawMessageData);
+
+      await atManager.deleteSMS(index);
+      log(`[QUEUE INBOUND] Deleted SMS from modem at index ${index}`);
+
+      const id = `in-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const inboundMessage = {
+        id,
+        type: 'inbound',
+        originalIndex: index,
+        modemMemory: memory,
+        rawData,
+        status: 'received_raw',
+        priority: config.priorities.INBOUND_HIGH,
+        createdAt: new Date().toISOString(),
+        retries: 0
+      };
+
+      db.get('queue').push(inboundMessage).write();
+      log(`[QUEUE INBOUND] Added inbound SMS ${id} to queue. Raw data stored.`);
+
+      this.process(); // Aciona o processamento da fila
+
+    } catch (e) {
+      error(`[QUEUE INBOUND] Error processing incoming SMS event for index ${index}:`, e.message, e.stack);
+      // O que fazer se a leitura ou deleção falhar? A mensagem pode ficar presa no SIM.
+      // Poderíamos tentar adicionar à fila com um status de erro para retry manual/inspeção?
+    }
   }
 }
 

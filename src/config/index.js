@@ -23,6 +23,17 @@ const config = {
     atDelay: parseInt(process.env.MODEM_AT_DELAY, 10) || 500,
     maxRetries: parseInt(process.env.MAX_RETRIES, 10) || 0,
   },
+  inbound: {
+    enabled: true,
+    webhookUrl: 'https://webhook.site/6c55f566-c377-440c-8d75-bc4da7af0ef8',
+    checkIntervalMs: 5000,
+    priority: 'inbound-high',
+  },
+  priorities: {
+    INBOUND_HIGH: 'inbound-high',
+    OUTBOUND_MEDIUM: 'outbound-medium',
+    OUTBOUND_LOW: 'outbound-low',
+  }
 };
 
 module.exports = config; 
