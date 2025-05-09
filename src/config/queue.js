@@ -96,12 +96,18 @@ class SMSQueue {
     this.processing = true;
 
     while (true) {
-      // Primeiro procura por mensagens prioritárias inbound
-      let message = db.get('queue').find({ status: 'pending', priority: config.priorities.INBOUND_HIGH }).value();
+      // Procurar mensagens inbound aguardando processamento (status 'received_raw')
+      let message = db
+        .get('queue')
+        .find({ priority: config.priorities.INBOUND_HIGH, type: 'inbound', status: 'received_raw' })
+        .value();
 
-      // Se não houver inbound, procura por outbound medium
+      // Se não houver inbound aguardando, procura por outras mensagens inbound pendentes (fallback)
       if (!message) {
-        message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM }).value();
+        message = db
+          .get('queue')
+          .find({ priority: config.priorities.INBOUND_HIGH, status: 'pending' })
+          .value();
       }
       
       // Se não houver outbound medium, continua com a fila bulk (outbound low)
