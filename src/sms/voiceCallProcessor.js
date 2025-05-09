@@ -125,16 +125,25 @@ class VoiceCallProcessor {
       // Limpar formatação do número (remover espaços, parênteses, etc.)
       const cleanedNumber = number.replace(/\s+/g, '');
       
-      // Enviar comando ATD (Dial) com o número
-      const dialCommand = `ATD${cleanedNumber};`;
-      log(`[VOICE] Enviando comando de discagem: ${dialCommand}`);
+      // Enviar comando ATD (Dial) com o número - ESCRITA DIRETA NA PORTA
+      // Nota: ATManager adiciona \r, mas vamos escrever diretamente para garantir \r
+      const dialCommand = `ATD${cleanedNumber};\r`;
+      log(`[VOICE] Enviando comando de discagem diretamente: ${dialCommand.replace(/\r/g, '\\r')}`);
       
-      // Enviar comando e aguardar resposta ou timeout
-      await atManager.send(dialCommand, 'OK');
+      // Escrever diretamente na porta serial ao invés de usar atManager
+      await new Promise((resolve, reject) => {
+        port.write(dialCommand, (err) => {
+          if (err) reject(err);
+          else {
+            port.drain(resolve);
+            log(`[VOICE] Comando de discagem enviado com sucesso`);
+          }
+        });
+      });
       
-      // Aguardar pelo início da chamada (CALL BEGIN)
+      // Aguardar pelo início da chamada ou falha
       log(`[VOICE] Aguardando atendimento da chamada...`);
-      await this.waitForCallStatus('BEGIN', 30000); // 30 segundos de timeout
+      await this.waitForCallStatus('BEGIN', 45000); // Aumentado para 45 segundos
       
       log(`[VOICE] Chamada atendida com sucesso.`);
     } catch (e) {
@@ -163,6 +172,18 @@ class VoiceCallProcessor {
         const str = data.toString();
         log(`[VOICE] Data recebida: ${str.trim()}`);
         
+        // Verificar falhas explícitas quando esperamos pelo início da chamada
+        if (status === 'BEGIN' && (
+            str.includes('NO CARRIER') || 
+            str.includes('BUSY') || 
+            str.includes('NO ANSWER') ||
+            str.includes('ERROR')
+        )) {
+          cleanup();
+          reject(new Error(`Chamada falhou: ${str.trim()}`));
+          return;
+        }
+        
         // Verificar padrões diferentes que podem indicar início de chamada
         // Os modems podem retornar diferentes URCs para indicar o mesmo status
         if (status === 'BEGIN' && (
@@ -170,7 +191,8 @@ class VoiceCallProcessor {
             str.includes('CONNECTED') ||
             str.includes('CONN') ||
             str.includes('CIEV: "CALL",1') ||
-            str.includes('VOICE CALL: BEGIN')
+            str.includes('VOICE CALL: BEGIN') ||
+            str.includes('VOICE CALL: BEGINESTABLISHED')
         )) {
           cleanup();
           resolve();
