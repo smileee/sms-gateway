@@ -20,7 +20,8 @@
     "lowdb": "^1.0.0",
     "openai": "^4.98.0",
     "serialport": "^10.5.0",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

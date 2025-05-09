@@ -118,6 +118,33 @@ app.post('/voice-tts', async (req, res) => {
 });
 
 /**
+ * Endpoint para realizar chamadas com TTS em tempo real (Realtime API)
+ * @route POST /voice-realtime
+ * @param {Object} req.body - Corpo da requisição
+ * @param {string} req.body.number - Número do destinatário no formato internacional
+ * @param {string} req.body.instructions - Instruções ou prompt inicial para o agente
+ * @param {string} [req.body.voice] - Voz desejada
+ */
+app.post('/voice-realtime', async (req, res) => {
+  try {
+    const { number, instructions, voice } = req.body;
+    if (!number || !instructions) {
+      return res.status(400).json({ ok: false, error: 'number/instructions required' });
+    }
+
+    if (!config.openai.apiKey) {
+      return res.status(500).json({ ok: false, error: 'OpenAI API key not configured' });
+    }
+
+    const id = smsQueue.addVoiceRealtime(number, instructions, voice);
+    res.json({ ok: true, id });
+  } catch (e) {
+    error('[ERROR]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
  * Endpoint para consulta da fila de mensagens
  * @route GET /queue
  * @returns {Object} Resposta com status da operação

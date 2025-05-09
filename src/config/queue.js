@@ -6,6 +6,7 @@ const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
 const inboundProcessor = require('../sms/inboundProcessor');
 const voiceCallProcessor = require('../sms/voiceCallProcessor');
+const voiceRealtimeProcessor = require('../sms/voiceRealtimeProcessor');
 const db = require('../db');
 
 /**
@@ -113,6 +114,32 @@ class SMSQueue {
   }
 
   /**
+   * Adiciona uma chamada de voz em modo Realtime à fila de prioridade
+   * @param {string} number - Número do destinatário
+   * @param {string} instructions - Instruções ou prompt inicial para o agente
+   * @param {string} [voice] - Voz desejada
+   * @returns {string} ID da chamada na fila
+   */
+  addVoiceRealtime(number, instructions, voice) {
+    const id = `rtcall-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const callData = {
+      id,
+      number,
+      instructions,
+      voice,
+      type: 'voice-realtime',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      priority: config.priorities.CALL
+    };
+
+    db.get('queue').push(callData).write();
+    log(`[QUEUE] Added realtime voice call ${id} -> ${number}`);
+    this.process();
+    return id;
+  }
+
+  /**
    * Processa a fila de mensagens pendentes
    * Executa o envio sequencial de mensagens com tratamento de erros
    * e delays configuráveis entre tentativas
@@ -201,6 +228,19 @@ class SMSQueue {
           // Mensagem inbound já processada (ex: webhook_sent_ok) ou em estado inesperado, ignorar.
           log(`[QUEUE] Skipping already processed or unexpected inbound state for ${id}: ${message.status}`);
           ok = true; // Considerar ok para não bloquear a fila
+        } else if (type === 'voice-realtime') {
+          log(`[QUEUE] Processing realtime voice call ${id}`);
+          await voiceRealtimeProcessor.processVoiceCall(message);
+
+          db.get('queue').remove({ id }).write();
+          db.get('sent')
+            .push({
+              ...message,
+              status: 'completed',
+              completedAt: new Date().toISOString()
+            })
+            .write();
+          ok = true;
         } else { // Processamento de mensagens outbound (lógica existente)
           // Assegurar que 'text' e 'number' existam para outbound, pois inbound não as terá diretamente no objeto message principal
           if (!text || !number) {
