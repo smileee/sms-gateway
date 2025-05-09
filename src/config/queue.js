@@ -1,6 +1,6 @@
 const config = require('../config');
 const { log, error } = require('../utils/logger');
-const smsSender = require('../sms/sender');
+const outboundProcessor = require('../sms/outboundProcessor');
 const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
@@ -106,15 +106,20 @@ class SMSQueue {
       if (!message) {
         message = db
           .get('queue')
-          .find({ priority: config.priorities.INBOUND_HIGH, status: 'pending' })
+          .find({ priority: config.priorities.INBOUND_HIGH, status: 'pending' }) // Este 'pending' deve ser para inbound que falhou no webhook e está para retry
           .value();
+      }
+      
+      // Se não houver inbound, procura por outbound medium
+      if (!message) {
+        message = db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_MEDIUM, type: undefined }).value();
       }
       
       // Se não houver outbound medium, continua com a fila bulk (outbound low)
       if (!message) {
         message = db
           .get('queue')
-          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, bulkIndex: this.currentBulkIndex })
+          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, type: undefined, bulkIndex: this.currentBulkIndex })
           .value();
       }
 
@@ -137,20 +142,30 @@ class SMSQueue {
         if (type === 'inbound' && message.status === 'received_raw') {
           log(`[QUEUE] Delegating inbound SMS ${id} to InboundProcessor.`);
           await inboundProcessor.processReceivedSMS(message);
-          // O inboundProcessor será responsável por atualizar o status no DB (e mover para 'sent' ou outra coleção)
-          // Por agora, consideramos 'ok' para que o delay seja o de sucesso.
-          // A remoção da fila principal ou atualização de status será feita pelo inboundProcessor.
+          ok = true; 
+        } else if (type === 'inbound' && message.status === 'webhook_send_failed') {
+          // Lógica para retry de webhook para inbound, se houver falha anterior
+          log(`[QUEUE] Retrying webhook for inbound SMS ${id}.`);
+          await inboundProcessor.processReceivedSMS(message); // O processador lida com retries e status final
           ok = true; 
         } else if (type === 'inbound') {
-          // Mensagem inbound já processada ou em estado inesperado, ignorar por enquanto.
+          // Mensagem inbound já processada (ex: webhook_sent_ok) ou em estado inesperado, ignorar.
           log(`[QUEUE] Skipping already processed or unexpected inbound state for ${id}: ${message.status}`);
           ok = true; // Considerar ok para não bloquear a fila
         } else { // Processamento de mensagens outbound (lógica existente)
-          // Validate message length before sending
+          // Assegurar que 'text' e 'number' existam para outbound, pois inbound não as terá diretamente no objeto message principal
+          if (!text || !number) {
+            error(`[QUEUE] Outbound message ${id} is missing number or text field. Skipping.`);
+            // Remover da fila para evitar bloqueio
+            db.get('queue').remove({ id }).write();
+            this.processing = false; // Para permitir que o próximo ciclo comece
+            this.process(); // Tenta processar a próxima
+            return; // Sai do loop atual
+          }
           smsEncoder.validateMessage(text);
 
           // Send the message
-          await smsSender.sendSMS(number, text);
+          await outboundProcessor.sendSMS(number, text);
           log(`[QUEUE] Sent ${id} OK`);
           ok = true;
 
