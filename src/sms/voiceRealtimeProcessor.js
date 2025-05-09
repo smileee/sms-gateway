@@ -81,6 +81,12 @@ class VoiceRealtimeProcessor {
         const pcmPath = path.join(TMP_DIR, `rt-${Date.now()}.pcm`);
         fs.writeFileSync(pcmPath, Buffer.concat(pcmBuffers));
         log(`[VOICE-RT] Sessão encerrada. PCM salvo em ${pcmPath}`);
+        try {
+          const stats = fs.statSync(pcmPath);
+          log(`[VOICE-RT] Tamanho do arquivo PCM: ${stats.size} bytes`);
+        } catch (e) {
+          error('[VOICE-RT] Erro ao obter tamanho do arquivo PCM:', e.message);
+        }
         resolve(pcmPath);
       });
 
@@ -118,9 +124,25 @@ class VoiceRealtimeProcessor {
           pcmPath,
           wavPath
         ]);
+        let soxStdout = '';
+        let soxStderr = '';
+        sox.stdout.on('data', (data) => soxStdout += data);
+        sox.stderr.on('data', (data) => soxStderr += data);
+
         sox.on('close', (code) => {
-          if (code === 0) resolve();
-          else reject(new Error(`sox exited ${code}`));
+          log(`[VOICE-RT] Sox stdout: ${soxStdout}`);
+          log(`[VOICE-RT] Sox stderr: ${soxStderr}`);
+          if (code === 0) {
+            try {
+              const stats = fs.statSync(wavPath);
+              log(`[VOICE-RT] Arquivo WAV gerado: ${wavPath}, Tamanho: ${stats.size} bytes`);
+            } catch (e) {
+              error('[VOICE-RT] Erro ao obter tamanho do arquivo WAV:', e.message);
+            }
+            resolve();
+          } else {
+            reject(new Error(`sox exited ${code}. Stderr: ${soxStderr}`));
+          }
         });
       });
 
