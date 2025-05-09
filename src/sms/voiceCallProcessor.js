@@ -78,6 +78,10 @@ class VoiceCallProcessor {
       log(`[VOICE] Discando para ${number}...`);
       await this.makeCall(number);
       
+      // Aguardar 750ms após a chamada ser atendida antes de reproduzir
+      log(`[VOICE] Aguardando 750ms após atendimento...`);
+      await serialManager.delay(750);
+      
       // Passo 3: Reproduzir o áudio quando a chamada for atendida
       log(`[VOICE] Reproduzindo áudio...`);
       await this.playAudio(audioPath);
