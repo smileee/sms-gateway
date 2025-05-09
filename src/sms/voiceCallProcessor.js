@@ -122,8 +122,10 @@ class VoiceCallProcessor {
     try {
       const { port, parser } = await serialManager.initialize();
       
-      // Limpar formatação do número (remover espaços, parênteses, etc.)
-      const cleanedNumber = number.replace(/\s+/g, '');
+      // Limpar formatação do número: remover +, espaços, parênteses, traços etc.
+      // Muitos modems não aceitam o caractere "+" no ATD; deve-se discar o número no formato
+      // internacional sem o prefixo (+55 31 …) → 5531…
+      const cleanedNumber = number.replace(/[^0-9]/g, '');
       
       // Fazer um flush no buffer para descartar dados pendentes que possam conter "NO CARRIER" residual
       await new Promise((resolve, reject) => {
