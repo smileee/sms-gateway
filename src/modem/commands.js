@@ -137,6 +137,10 @@ class ATCommandManager {
     // await this.send('AT+CMGF=1'); 
     // O sender.js já configura AT+CMGF=1, então geralmente é seguro assumir.
 
+    // MODIFICAÇÃO: Garantir AT+CMGF=1 antes de ler
+    await this.send('AT+CMGF=1');
+    log(`[COMMANDS] Ensured modem is in text mode (AT+CMGF=1) for reading.`);
+
     const command = `AT+CMGR=${index}`;
     // A resposta de AT+CMGR é multi-linha. O _send padrão espera uma única linha de "expect".
     // Precisamos de uma lógica que capture múltiplas linhas até o "OK" final ou um erro.

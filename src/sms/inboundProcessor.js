@@ -17,6 +17,22 @@ function parseRawSMSData(rawData) {
     return null;
   }
 
+  // Helper para decodificar UCS-2 Hex para String
+  function decodeUCS2Hex(hexStr) {
+    if (!hexStr || typeof hexStr !== 'string' || !/^[0-9a-fA-F]+$/.test(hexStr) || hexStr.length % 4 !== 0) {
+      // Se não for uma string UCS-2 hexadecimal válida, retorna como está (ou poderia lançar erro/logar)
+      // Alguns modems podem retornar texto normal para o remetente mesmo se a msg for UCS2
+      warn('[INBOUND_PROCESSOR] decodeUCS2Hex: Input is not a valid UCS-2 hex string, returning as is:', hexStr);
+      return hexStr; 
+    }
+    let str = '';
+    for (let i = 0; i < hexStr.length; i += 4) {
+      const charCode = parseInt(hexStr.substring(i, i + 4), 16);
+      str += String.fromCharCode(charCode);
+    }
+    return str;
+  }
+
   const lines = rawData.trim().split(/\r\n|\n|\r/);
   let sender = null;
   let timestamp = null;
@@ -34,6 +50,11 @@ function parseRawSMSData(rawData) {
         if (parts.length > 4) { // Se houver mais partes após o timestamp (geralmente não deveria para +CMGR)
             timestamp += "," + parts.slice(4).join(",").replace(/"/g, '');
         }
+        // Decodificar sender se estiver em UCS-2
+        if (sender.match(/^[0-9a-fA-F]{4,}$/i) && sender.length % 4 === 0) {
+            log('[INBOUND_PROCESSOR] Decoding UCS-2 sender:', sender);
+            sender = decodeUCS2Hex(sender);
+        }
       }
       headerFound = true;
     } else if (headerFound && !line.match(/^OK$/i) && !line.match(/^ERROR$/i) && line.trim() !== '') {
@@ -44,6 +65,12 @@ function parseRawSMSData(rawData) {
     }
   }
   
+  // Após acumular todo o texto, verificar se ele é UCS-2 e decodificá-lo
+  if (text.match(/^[0-9a-fA-F]{4,}$/i) && text.length % 4 === 0 && text.indexOf(' ') === -1) {
+    log('[INBOUND_PROCESSOR] Decoding UCS-2 text content:', text);
+    text = decodeUCS2Hex(text);
+  }
+
   if (sender && text) { // Timestamp pode ser opcional dependendo do modem/config
     return { sender, timestamp, text };
   }  

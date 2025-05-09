@@ -239,7 +239,7 @@ class SMSQueue {
         type: 'inbound',
         originalIndex: index,
         modemMemory: memory,
-        rawData,
+        rawData: rawMessageData,
         status: 'received_raw',
         priority: config.priorities.INBOUND_HIGH,
         createdAt: new Date().toISOString(),
