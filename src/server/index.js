@@ -5,6 +5,7 @@ const config = require('../config');
 const { log, error } = require('../utils/logger');
 const smsQueue = require('../config/queue');
 const smsEncoder = require('../sms/encoding');
+const serialManager = require('../modem/serial');
 
 const app = express();
 
@@ -162,4 +163,9 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(config.server.port, () => {
   log(`SMS API server running on port ${config.server.port}`);
+  if (config.inbound?.enabled) {
+    serialManager.initialize()
+      .then(() => log('[INBOUND] Serial port initialized for inbound listening'))
+      .catch((e) => error('[INBOUND] Failed to initialize serial port on startup:', e.message));
+  }
 }); 
