@@ -33,12 +33,26 @@ class VoiceCallProcessor {
    * @returns {Promise<string>} Caminho do arquivo de áudio gerado
    */
   async generateSpeech(text, outputPath, voice = 'coral') {
+    // Lista de vozes suportadas pela API OpenAI TTS
+    const supportedVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+    
+    // Normalizar o nome da voz para lowercase
+    const normalizedVoice = voice.toLowerCase();
+    
+    // Verificar se a voz é suportada
+    if (!supportedVoices.includes(normalizedVoice)) {
+      log(`[VOICE] Voz '${voice}' não suportada. Usando voz padrão 'alloy'.`);
+      voice = 'alloy';
+    } else {
+      voice = normalizedVoice;
+    }
+    
     log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
     
     try {
       const mp3Response = await this.openai.audio.speech.create({
         model: "gpt-4o-mini-tts",
-        voice: voice, // Use provided voice or fallback to 'coral'
+        voice: voice,
         input: text,
         response_format: "wav", // Formato compatível com aplay
       });
