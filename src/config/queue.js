@@ -18,7 +18,6 @@ const db = require('../db');
 class SMSQueue {
   constructor() {
     this.processing = false;
-    this.currentBulkIndex = 0; // Tracks current position in bulk queue
   }
 
   /**
@@ -73,7 +72,6 @@ class SMSQueue {
       status: 'pending',
       createdAt: new Date().toISOString(),
       priority: config.priorities.OUTBOUND_LOW, // Atualizado para prioridade baixa
-      bulkIndex: i // Mantém o índice original na fila bulk
     }));
 
     db.get('queue')
@@ -179,22 +177,18 @@ class SMSQueue {
       if (!message) {
         message = db
           .get('queue')
-          .find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW, bulkIndex: this.currentBulkIndex })
+          .filter({ status: 'pending', priority: config.priorities.OUTBOUND_LOW })
+          .sortBy('createdAt')
+          .head()
           .value();
       }
 
       if (!message) {
-        // Se não encontrou mensagem no índice atual, reinicia o índice para bulk
-        if (this.currentBulkIndex > 0 && 
-            !db.get('queue').find({ status: 'pending', priority: config.priorities.OUTBOUND_LOW }).value()) {
-          this.currentBulkIndex = 0;
-          // continue; // Removido para evitar loop infinito se só houver bulk e o índice for resetado
-        }
         this.processing = false;
         break;
       }
 
-      const { number, message: text, id, priority, bulkIndex, retries = 0, type, rawData } = message;
+      const { number, message: text, id, priority, retries = 0, type, rawData } = message;
       log(`[QUEUE] Processing ${id} (Priority: ${priority}, Type: ${type || 'outbound'}, Attempt: ${retries + 1})`);
 
       let ok = false;
@@ -247,9 +241,6 @@ class SMSQueue {
             error(`[QUEUE] Outbound message ${id} is missing number or text field. Skipping.`);
             // Remover da fila para evitar bloqueio
             db.get('queue').remove({ id }).write();
-            // this.processing = false; // Não resetar aqui, o loop while vai continuar
-            // this.process(); // Remover chamada recursiva
-            // return; // Remover return, deixar o loop continuar para a próxima mensagem
             ok = true; // Considerar como "processado" para o delay e para continuar o loop
             continue; // Pula para a próxima iteração do while loop
           }
@@ -269,11 +260,6 @@ class SMSQueue {
               sentAt: new Date().toISOString()
             })
             .write();
-
-          // Atualiza o índice da fila bulk se necessário
-          if (priority === config.priorities.OUTBOUND_LOW && bulkIndex !== undefined) {
-            this.currentBulkIndex = bulkIndex + 1;
-          }
         }
       } catch (err) {
         log(`[QUEUE] Fail ${id}:`, err.message);
@@ -317,7 +303,6 @@ class SMSQueue {
    */
   clearQueue() {
     db.set('queue', []).write();
-    this.currentBulkIndex = 0;
     return true;
   }
 

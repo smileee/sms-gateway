@@ -19,11 +19,16 @@ class ATCommandManager {
   }
 
   async _send(command, expect, timeout) {
-    const { port, parser } = await serialManager.initialize();
+    const port = serialManager.port;
+    const parser = serialManager.parser;
+
+    if (!port || !port.isOpen || !parser) {
+      const errMsg = 'Serial port not initialized or not open in ATCommandManager._send. Ensure serialManager.initialize() was called and completed successfully at startup.';
+      error('[ATManager]', errMsg);
+      return Promise.reject(new Error(errMsg));
+    }
     
     return new Promise((resolve, reject) => {
-      if (!parser) return reject(new Error('Parser not ready'));
-
       let buf = '';
       const handler = (data) => {
         buf += data;
@@ -50,7 +55,13 @@ class ATCommandManager {
   }
 
   async waitForPrompt(timeout = config.timeouts.prompt) {
-    const { port, parser } = await serialManager.initialize();
+    const port = serialManager.port;
+
+    if (!port || !port.isOpen) {
+      const errMsg = 'Serial port not initialized or not open in ATCommandManager.waitForPrompt.';
+      error('[ATManager]', errMsg);
+      return Promise.reject(new Error(errMsg));
+    }
     
     return new Promise((resolve, reject) => {
       let asciiBuf = '';
@@ -94,7 +105,14 @@ class ATCommandManager {
   }
 
   async ensureModemReady(attempts = config.modem.atAttempts) {
-    const { port, parser } = await serialManager.initialize();
+    const port = serialManager.port;
+    const parser = serialManager.parser;
+
+    if (!port || !port.isOpen || !parser) {
+      const errMsg = 'Serial port not initialized or not open in ATCommandManager.ensureModemReady.';
+      error('[ATManager]', errMsg);
+      return Promise.reject(new Error(errMsg));
+    }
     
     try {
       log('Ensuring modem is in command mode...');
