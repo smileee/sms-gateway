@@ -5,8 +5,8 @@ const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
 const inboundProcessor = require('../sms/inboundProcessor');
-const voiceCallProcessor = require('../sms/voiceCallProcessor');
-const voiceRealtimeProcessor = require('../sms/voiceRealtimeProcessor');
+const voiceCallProcessor = require('../voice/voiceCallProcessor');
+const voiceRealtimeProcessor = require('../voice/voiceRealtimeProcessor');
 const db = require('../db');
 
 /**
