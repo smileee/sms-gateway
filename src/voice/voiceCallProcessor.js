@@ -29,15 +29,16 @@ class VoiceCallProcessor {
    * Gera um arquivo de áudio a partir de texto usando a API de TTS da OpenAI
    * @param {string} text - O texto a ser convertido em fala
    * @param {string} outputPath - Caminho para salvar o arquivo de áudio
+   * @param {string} voice - Voz a ser usada para gerar o áudio
    * @returns {Promise<string>} Caminho do arquivo de áudio gerado
    */
-  async generateSpeech(text, outputPath) {
-    log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+  async generateSpeech(text, outputPath, voice = 'coral') {
+    log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
     
     try {
       const mp3Response = await this.openai.audio.speech.create({
         model: "gpt-4o-mini-tts",
-        voice: "coral", // Voz clara e natural
+        voice: voice, // Use provided voice or fallback to 'coral'
         input: text,
         response_format: "wav", // Formato compatível com aplay
       });
@@ -59,7 +60,7 @@ class VoiceCallProcessor {
    * @returns {Promise<boolean>} true se processado com sucesso
    */
   async processVoiceCall(message) {
-    const { id, number, text } = message;
+    const { id, number, text, voice } = message;
     log(`[VOICE] Processando chamada ${id} para ${number}`);
     
     if (this.inCall) {
@@ -71,8 +72,8 @@ class VoiceCallProcessor {
     const audioPath = path.join(TMP_DIR, `tts-${id}.wav`);
     
     try {
-      // Passo 1: Gerar o áudio TTS
-      await this.generateSpeech(text, audioPath);
+      // Passo 1: Gerar o áudio TTS com a voz especificada ou fallback para 'coral'
+      await this.generateSpeech(text, audioPath, voice);
       
       // Passo 2: Fazer a chamada para o número
       log(`[VOICE] Discando para ${number}...`);

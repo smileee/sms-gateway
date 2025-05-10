@@ -88,14 +88,16 @@ class SMSQueue {
    * Adiciona uma chamada de voz à fila de prioridade
    * @param {string} number - Número do destinatário no formato internacional
    * @param {string} text - Texto a ser convertido em áudio TTS
+   * @param {string} [voice] - Voz desejada (opcional, padrão: 'coral')
    * @returns {string} ID único da chamada na fila
    */
-  addVoiceCall(number, text) {
+  addVoiceCall(number, text, voice) {
     const id = `call-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const callData = {
       id,
       number,
       text,
+      voice,
       type: 'voice-tts',
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -106,7 +108,7 @@ class SMSQueue {
       .push(callData)
       .write();
 
-    log(`[QUEUE] Added voice call ${id} -> ${number}`);
+    log(`[QUEUE] Added voice call ${id} -> ${number} with voice: ${voice || 'coral'}`);
     this.process();
     return id;
   }
