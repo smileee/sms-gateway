@@ -215,9 +215,17 @@ class ATCommandManager {
     for (const { cmd, key } of commands) {
       try {
         const resp = await this.send(cmd, 'OK', 2000);
-        info[key] = this._parseATResponse(key, resp);
+        if (["at", "echo", "manufacturer", "model", "subversion", "firmware"].includes(key)) {
+          // info[key] = this._parseATResponse(key, resp);
+        } else {
+          info[key] = this._parseATResponse(key, resp);
+        }
       } catch (e) {
-        info[key] = `ERROR: ${e.message}`;
+        if (["at", "echo", "manufacturer", "model", "subversion", "firmware"].includes(key)) {
+          // info[key] = `ERROR: ${e.message}`;
+        } else {
+          info[key] = `ERROR: ${e.message}`;
+        }
       }
     }
     return info;
