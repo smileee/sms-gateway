@@ -1,0 +1,306 @@
+{
+	"info": {
+		"_postman_id": "4244452f-241c-4633-9e1c-bb179463a9f4",
+		"name": "[SENDEASY] SMS Gateway V1",
+		"description": "Collection for testing the SMS Gateway API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24683094"
+	},
+	"item": [
+		{
+			"name": "Send Single SMS",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"number\": \"{{phone_number}}\",\n    \"message\": \"A jornada de mil milhas inicia! Ação concluída com êxito! 😊\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/sms",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"sms"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Voice TTS",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"number\": \"{{phone_number}}\",\n    \"text\": \"This is SendEasy calling you!! Send Easy fits any type of business that needs to improve communication, sell more, and convert better. Visit us on www.sendeasy.app and start your free trial\",\n    \"voice\": \"onyx\"\n  }"
+				},
+				"url": {
+					"raw": "{{base_url}}/voice-tts",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"voice-tts"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Voice Realtime",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"number\": \"{{phone_number}}\",\n        \"instructions\":\"Olá! Esta é uma chamada de teste em tempo real.\",\n        \"voice\":\"alloy\"\n      }"
+				},
+				"url": {
+					"raw": "{{base_url}}/voice-realtime",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"voice-realtime"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Bulk SMS",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"messages\": [\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"A persistência transforma sonhos em realidade!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Cada passo importa, mesmo os pequenos!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sua jornada é única. Não compare com outras!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Força hoje, colhe os frutos amanhã!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Acredite: você é mais forte que seus medos!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Cada recomeço traz novas oportunidades!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não desista! A melhor versão de você está por vir.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sorria! A positividade atrai coisas boas.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Erros são lições disfarçadas. Aprenda!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Você é capaz de superar qualquer desafio!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Foco no objetivo, não nas dificuldades.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Grandes conquistas começam com pequenos passos.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sua força interior é maior do que imagina!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Permita-se crescer além dos seus limites!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"A disciplina é a chave para grandes vitórias.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Nunca é tarde para recomeçar. Respire e vá!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Cada obstáculo é um degrau para o sucesso.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Confie no processo. Os resultados virão!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Avance, mesmo que não veja o caminho todo!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Você é autor da sua história. Escreva bem!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"O fracasso é temporário. A persistência não!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Encare cada dia como uma nova oportunidade!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não há atalhos para lugares valiosos. Persista!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sua resiliência inspira outros. Continue!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"O sucesso é a soma de pequenos esforços!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Mantenha-se firme. A tempestade vai passar.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Transforme obstáculos em degraus. Suba!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não pare até estar orgulhoso de si mesmo!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Acredite no seu caminho, mesmo solitário.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Cada queda é uma lição. Levante-se!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Você é mais corajoso do que pensa. Prove!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sonhe alto, trabalhe duro, conquiste tudo!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"A sorte favorece os corajosos. Arrisque!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Siga em frente, mesmo que lentamente. Vá!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Hoje é dia de dar o melhor de si. Você consegue!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não espere perfeição. Progresso já é vitória!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sua energia positiva contagia o mundo. Brilhe!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"O caminho é difícil, mas a vitória é doce!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não tenha medo de brilhar. Você merece!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Cada dia é uma página nova. Escreva-a bem!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Persista com paixão. O universo conspira a favor!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Acredite, lute, conquiste. Repita!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Seu tempo vai chegar. Prepare-se hoje!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"A vida é agora. Faça valer cada momento!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Pequenos progressos ainda são vitórias. Celebre!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Não crie limites onde não existem. Voe!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Levante-se e brilhe! O mundo precisa de você.\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Acredite no seu potencial ilimitado!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Desafios fortalecem. Enfrente com coragem!\"\n        },\n        {\n            \"number\": \"{{phone_number}}\",\n            \"message\": \"Sua dedicação vai levar você até o topo!\"\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/bulk-sms",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"bulk-sms"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send a Reset",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/reset",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"reset"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Queue Status",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/queue",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"queue"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Information",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/info",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"info"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Sent Messages",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/sent",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"sent"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clear Queue",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/queue",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"queue"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clear Sent History",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "x-auth-token",
+						"value": "{{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/sent",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"sent"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://q1-hash-gateway.sendeasy.pro\n",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "sendeasy-sms-token-2024",
+			"type": "string"
+		},
+		{
+			"key": "phone_number",
+			"value": "+12345678901",
+			"type": "string"
+		}
+	]
+}
