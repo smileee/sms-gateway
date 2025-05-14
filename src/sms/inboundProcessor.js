@@ -111,7 +111,8 @@ async function processReceivedSMS(message) {
     modemTimestamp: parsedData.timestamp,
     gatewayReceivedAt: message.createdAt, // Quando o gateway registrou o evento +CMTI
     originalIndex: message.originalIndex,
-    modemMemory: message.modemMemory
+    modemMemory: message.modemMemory,
+    imei: config.modem.imei
   };
 
   log(`[INBOUND_PROCESSOR] Sending to webhook for ${message.id}:`, payload);

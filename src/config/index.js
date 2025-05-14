@@ -22,10 +22,11 @@ const config = {
     atAttempts: parseInt(process.env.MODEM_AT_ATTEMPTS, 10) || 3,
     atDelay: parseInt(process.env.MODEM_AT_DELAY, 10) || 500,
     maxRetries: parseInt(process.env.MAX_RETRIES, 10) || 0,
+    imei: process.env.MODEM_IMEI || '',
   },
   inbound: {
     enabled: true,
-    webhookUrl: 'https://webhook.site/6c55f566-c377-440c-8d75-bc4da7af0ef8',
+    webhookUrl: process.env.INBOUND_WEBHOOK_URL || '',
     checkIntervalMs: 5000,
     priority: 'inbound-high',
   },
@@ -37,7 +38,7 @@ const config = {
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-  },
+  }
 };
 
 module.exports = config; 
