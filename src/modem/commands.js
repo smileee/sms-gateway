@@ -215,12 +215,68 @@ class ATCommandManager {
     for (const { cmd, key } of commands) {
       try {
         const resp = await this.send(cmd, 'OK', 2000);
-        info[key] = resp;
+        info[key] = this._parseATResponse(key, resp);
       } catch (e) {
         info[key] = `ERROR: ${e.message}`;
       }
     }
     return info;
+  }
+
+  /**
+   * Faz o parse da resposta AT para cada comando de info
+   */
+  _parseATResponse(key, resp) {
+    if (typeof resp !== 'string') return resp;
+    // Remove eco do comando e OK
+    const lines = resp.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Remove linhas que são o comando ou 'OK'
+    const filtered = lines.filter(l => l !== key && !l.startsWith('AT') && l !== 'OK');
+    // Parse específico por comando
+    switch (key) {
+      case 'manufacturer':
+      case 'model':
+      case 'imei':
+      case 'firmware':
+        return filtered[0] || '';
+      case 'subversion':
+        // Pode vir múltiplas linhas +CSUB
+        return filtered.filter(l => l.startsWith('+CSUB:')).map(l => l.replace('+CSUB:','').trim());
+      case 'signal':
+        // +CSQ: 31,99
+        const csq = filtered.find(l => l.startsWith('+CSQ:'));
+        if (csq) {
+          const [, values] = csq.split(':');
+          if (values) {
+            const [rssi, ber] = values.split(',').map(s => s.trim());
+            return { rssi: Number(rssi), ber: Number(ber) };
+          }
+        }
+        return filtered.join(' ');
+      case 'sim':
+        // +CPIN: READY
+        const cpin = filtered.find(l => l.startsWith('+CPIN:'));
+        return cpin ? cpin.replace('+CPIN:','').trim() : filtered.join(' ');
+      case 'operator':
+        // +COPS: 0,0,"T-Mobile",7
+        const cops = filtered.find(l => l.startsWith('+COPS:'));
+        if (cops) {
+          const match = cops.match(/"([^"]+)"/);
+          return match ? match[1] : cops;
+        }
+        return filtered.join(' ');
+      case 'registration':
+        // +CREG: 0,1
+        const creg = filtered.find(l => l.startsWith('+CREG:'));
+        return creg ? creg.replace('+CREG:','').trim() : filtered.join(' ');
+      case 'network':
+        // +CPSI: ...
+        const cpsi = filtered.find(l => l.startsWith('+CPSI:'));
+        return cpsi ? cpsi.replace('+CPSI:','').trim() : filtered.join(' ');
+      default:
+        // Para 'at' e 'echo', só retorna OK ou vazio
+        return filtered.join(' ');
+    }
   }
 
   /**
