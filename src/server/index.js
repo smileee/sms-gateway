@@ -6,6 +6,7 @@ const { log, error } = require('../utils/logger');
 const smsQueue = require('../config/queue');
 const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
+const atManager = require('../modem/commands');
 
 const app = express();
 
@@ -210,6 +211,36 @@ app.delete('/sent', (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     error('[ERROR]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * Endpoint para obter informações do modem
+ * @route GET /info
+ * @returns {Object} Resposta com informações do modem
+ */
+app.get('/info', async (req, res) => {
+  try {
+    const info = await atManager.getInfo();
+    res.json({ ok: true, info });
+  } catch (e) {
+    error('[ERROR /info]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * Endpoint para resetar o modem
+ * @route POST /reset
+ * @returns {Object} Resposta com status da operação
+ */
+app.post('/reset', async (req, res) => {
+  try {
+    const resp = await atManager.resetModem();
+    res.json({ ok: true, response: resp });
+  } catch (e) {
+    error('[ERROR /reset]', e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });

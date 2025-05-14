@@ -192,6 +192,43 @@ class ATCommandManager {
     log(`[COMMANDS] Deleting SMS at index: ${index}, deleteAll: ${deleteAll}`);
     return this.enqueue(() => this._send(command, 'OK', config.timeouts.atCommand));
   }
+
+  /**
+   * Executa uma bateria de comandos AT e retorna informações do modem em JSON.
+   */
+  async getInfo() {
+    const commands = [
+      { cmd: 'AT', key: 'at' },
+      { cmd: 'ATE1', key: 'echo' },
+      { cmd: 'AT+CGMI', key: 'manufacturer' },
+      { cmd: 'AT+CGMM', key: 'model' },
+      { cmd: 'AT+CGSN', key: 'imei' },
+      { cmd: 'AT+CSUB', key: 'subversion' },
+      { cmd: 'AT+CGMR', key: 'firmware' },
+      { cmd: 'AT+CSQ', key: 'signal' },
+      { cmd: 'AT+CPIN?', key: 'sim' },
+      { cmd: 'AT+COPS?', key: 'operator' },
+      { cmd: 'AT+CREG?', key: 'registration' },
+      { cmd: 'AT+CPSI?', key: 'network' },
+    ];
+    const info = {};
+    for (const { cmd, key } of commands) {
+      try {
+        const resp = await this.send(cmd, 'OK', 2000);
+        info[key] = resp;
+      } catch (e) {
+        info[key] = `ERROR: ${e.message}`;
+      }
+    }
+    return info;
+  }
+
+  /**
+   * Reseta o modem via AT+CRESET
+   */
+  async resetModem() {
+    return this.send('AT+CRESET', 'OK', 5000);
+  }
 }
 
 module.exports = new ATCommandManager(); 
