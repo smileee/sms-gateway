@@ -332,27 +332,35 @@ class VoiceCallProcessor {
   }
 
   /**
-   * Processa uma chamada de voz usando um arquivo de áudio existente
-   * @param {Object} message - { id, number, fileUrl, voice }
+   * Processa uma chamada de voz usando um arquivo de áudio existente ou upload
+   * @param {Object} message - { id, number, fileUrl, localFilePath, voice }
    * @returns {Promise<boolean>} true se processado com sucesso
    */
   async processVoiceFileCall(message) {
-    const { id, number, fileUrl, voice } = message;
-    log(`[VOICE] [FILE] Processando chamada ${id} para ${number} com arquivo: ${fileUrl}`);
+    const { id, number, fileUrl, localFilePath, voice } = message;
+    log(`[VOICE] [FILE] Processando chamada ${id} para ${number} com arquivo: ${fileUrl || localFilePath}`);
     if (this.inCall) {
       error(`[VOICE] [FILE] Já existe uma chamada em andamento. Chamada ${id} será adiada.`);
       return false;
     }
     this.inCall = true;
-    // Detect extension
-    const ext = (fileUrl.split('.').pop() || 'wav').toLowerCase();
-    const audioPath = path.join(TMP_DIR, `voicefile-${id}.${ext}`);
+    // Se for upload, usa o arquivo local diretamente; se for fileUrl, baixa para temp
+    let audioPath = localFilePath;
+    let downloaded = false;
     try {
-      // Baixar o arquivo de áudio
-      log(`[VOICE] [FILE] Baixando arquivo de áudio: ${fileUrl}`);
-      const audioRes = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-      await writeFile(audioPath, Buffer.from(audioRes.data));
-      log(`[VOICE] [FILE] Arquivo de áudio salvo em: ${audioPath}`);
+      if (!audioPath) {
+        // Detect extension from URL
+        const ext = (fileUrl.split('.').pop() || 'wav').toLowerCase();
+        audioPath = path.join(TMP_DIR, `voicefile-${id}.${ext}`);
+        // Baixar o arquivo de áudio
+        log(`[VOICE] [FILE] Baixando arquivo de áudio: ${fileUrl}`);
+        const audioRes = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+        await writeFile(audioPath, Buffer.from(audioRes.data));
+        log(`[VOICE] [FILE] Arquivo de áudio salvo em: ${audioPath}`);
+        downloaded = true;
+      } else {
+        log(`[VOICE] [FILE] Usando arquivo local enviado: ${audioPath}`);
+      }
       // Fazer a chamada
       log(`[VOICE] [FILE] Discando para ${number}...`);
       await this.makeCall(number);
@@ -375,10 +383,12 @@ class VoiceCallProcessor {
       throw e;
     } finally {
       this.inCall = false;
-      // Remover o arquivo de áudio temporário
+      // Remover o arquivo de áudio temporário (se foi baixado ou enviado)
       try {
-        await unlink(audioPath);
-        log(`[VOICE] [FILE] Arquivo de áudio temporário removido: ${audioPath}`);
+        if (audioPath && (downloaded || localFilePath)) {
+          await unlink(audioPath);
+          log(`[VOICE] [FILE] Arquivo de áudio temporário removido: ${audioPath}`);
+        }
       } catch (unlinkErr) {
         error(`[VOICE] [FILE] Erro ao remover arquivo temporário: ${unlinkErr.message}`);
       }

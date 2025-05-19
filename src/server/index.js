@@ -7,6 +7,8 @@ const smsQueue = require('../config/queue');
 const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
+const multer = require('multer');
+const upload = multer({ dest: 'tmp/' });
 
 const app = express();
 
@@ -146,23 +148,50 @@ app.post('/voice-realtime', async (req, res) => {
 });
 
 /**
- * Endpoint para realizar chamadas usando um arquivo de áudio já existente
+ * Endpoint para realizar chamadas usando um arquivo de áudio já existente ou upload
  * @route POST /voice-file
- * @param {Object} req.body - Corpo da requisição
- * @param {string} req.body.number - Número do destinatário no formato internacional (ex: +5511999999999)
- * @param {string} req.body.fileUrl - URL pública do arquivo de áudio (wav/mp3)
- * @param {string} [req.body.voice] - Nome da voz (opcional, para logging)
+ * @param {string} number - Número do destinatário no formato internacional (ex: +5511999999999)
+ * @param {string} [fileUrl] - URL pública do arquivo de áudio (wav/mp3)
+ * @param {file} [file] - Arquivo de áudio enviado via upload (multipart/form-data)
+ * @param {string} [voice] - Nome da voz (opcional, para logging)
  * @returns {Object} Resposta com status da operação
  * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
  * @returns {string} [res.id] - ID da chamada na fila (se ok=true)
  * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ *
+ * Exemplo curl para upload:
+ * curl -X POST http://localhost:3000/voice-file \
+ *   -H "x-auth-token: sendeasy-sms-token-2024" \
+ *   -F "number=+5511999999999" \
+ *   -F "file=@/caminho/para/seu/audio.mp3"
+ *
+ * Exemplo curl para fileUrl:
+ * curl -X POST http://localhost:3000/voice-file \
+ *   -H "Content-Type: application/json" \
+ *   -H "x-auth-token: sendeasy-sms-token-2024" \
+ *   -d '{ "number": "+5511999999999", "fileUrl": "https://.../audio.mp3" }'
  */
-app.post('/voice-file', async (req, res) => {
+app.post('/voice-file', upload.single('file'), async (req, res) => {
   try {
     const { number, fileUrl, voice } = req.body;
-    if (!number || !fileUrl)
-      return res.status(400).json({ ok: false, error: 'number/fileUrl required' });
-    const id = smsQueue.addVoiceFileCall(number, fileUrl, voice);
+    const file = req.file;
+    if (!number) {
+      return res.status(400).json({ ok: false, error: 'number required' });
+    }
+    if (!fileUrl && !file) {
+      return res.status(400).json({ ok: false, error: 'fileUrl or file required' });
+    }
+    if (fileUrl && file) {
+      return res.status(400).json({ ok: false, error: 'Use only fileUrl OR file, not both' });
+    }
+    let id;
+    if (file) {
+      // File uploaded: pass local path to queue
+      id = smsQueue.addVoiceFileCall(number, null, voice, file.path);
+    } else {
+      // fileUrl provided: pass as before
+      id = smsQueue.addVoiceFileCall(number, fileUrl, voice);
+    }
     res.json({ ok: true, id });
   } catch (e) {
     error('[ERROR]', e.message);

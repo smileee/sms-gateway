@@ -142,17 +142,19 @@ class SMSQueue {
   /**
    * Adiciona uma chamada de voz usando arquivo de áudio à fila de prioridade
    * @param {string} number - Número do destinatário
-   * @param {string} fileUrl - URL pública do arquivo de áudio
+   * @param {string} [fileUrl] - URL pública do arquivo de áudio
    * @param {string} [voice] - Nome da voz (opcional, para logging)
+   * @param {string} [localFilePath] - Caminho local do arquivo enviado via upload
    * @returns {string} ID único da chamada na fila
    */
-  addVoiceFileCall(number, fileUrl, voice) {
+  addVoiceFileCall(number, fileUrl, voice, localFilePath) {
     const id = `filecall-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const callData = {
       id,
       number,
       fileUrl,
       voice,
+      localFilePath,
       type: 'voice-file',
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -161,7 +163,7 @@ class SMSQueue {
     db.get('queue')
       .push(callData)
       .write();
-    log(`[QUEUE] Added voice file call ${id} -> ${number} with file: ${fileUrl}`);
+    log(`[QUEUE] Added voice file call ${id} -> ${number} with file: ${fileUrl || localFilePath}`);
     this.process();
     return id;
   }
