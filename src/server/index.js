@@ -146,6 +146,31 @@ app.post('/voice-realtime', async (req, res) => {
 });
 
 /**
+ * Endpoint para realizar chamadas usando um arquivo de áudio já existente
+ * @route POST /voice-file
+ * @param {Object} req.body - Corpo da requisição
+ * @param {string} req.body.number - Número do destinatário no formato internacional (ex: +5511999999999)
+ * @param {string} req.body.fileUrl - URL pública do arquivo de áudio (wav/mp3)
+ * @param {string} [req.body.voice] - Nome da voz (opcional, para logging)
+ * @returns {Object} Resposta com status da operação
+ * @returns {boolean} res.ok - Indica se a operação foi bem sucedida
+ * @returns {string} [res.id] - ID da chamada na fila (se ok=true)
+ * @returns {string} [res.error] - Mensagem de erro (se ok=false)
+ */
+app.post('/voice-file', async (req, res) => {
+  try {
+    const { number, fileUrl, voice } = req.body;
+    if (!number || !fileUrl)
+      return res.status(400).json({ ok: false, error: 'number/fileUrl required' });
+    const id = smsQueue.addVoiceFileCall(number, fileUrl, voice);
+    res.json({ ok: true, id });
+  } catch (e) {
+    error('[ERROR]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
  * Endpoint para consulta da fila de mensagens
  * @route GET /queue
  * @returns {Object} Resposta com status da operação

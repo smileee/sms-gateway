@@ -7,6 +7,7 @@ const config = require('../config');
 const { log, error } = require('../utils/logger');
 const atManager = require('../modem/commands');
 const serialManager = require('../modem/serial');
+const axios = require('axios');
 
 const execPromise = promisify(exec);
 const mkdir = promisify(fs.mkdir);
@@ -26,45 +27,80 @@ class VoiceCallProcessor {
   }
 
   /**
-   * Gera um arquivo de áudio a partir de texto usando a API de TTS da OpenAI
+   * Gera um arquivo de áudio a partir de texto usando a API de TTS da SendEasy (padrão) ou OpenAI
    * @param {string} text - O texto a ser convertido em fala
    * @param {string} outputPath - Caminho para salvar o arquivo de áudio
    * @param {string} voice - Voz a ser usada para gerar o áudio
+   * @param {string} provider - 'sendeasy' (padrão) ou 'openai'
    * @returns {Promise<string>} Caminho do arquivo de áudio gerado
    */
-  async generateSpeech(text, outputPath, voice = 'coral') {
-    // Lista de vozes suportadas pela API OpenAI TTS
-    const supportedVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
-    
-    // Normalizar o nome da voz para lowercase
-    const normalizedVoice = voice.toLowerCase();
-    
-    // Verificar se a voz é suportada
-    if (!supportedVoices.includes(normalizedVoice)) {
-      log(`[VOICE] Voz '${voice}' não suportada. Usando voz padrão 'alloy'.`);
-      voice = 'alloy';
+  async generateSpeech(text, outputPath, voice = 'coral', provider = 'sendeasy') {
+    provider = (provider || 'sendeasy').toLowerCase();
+    if (provider === 'openai') {
+      // --- OPENAI TTS (mantém como está, só move para dentro do if) ---
+      const supportedVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
+      const normalizedVoice = voice.toLowerCase();
+      if (!supportedVoices.includes(normalizedVoice)) {
+        log(`[VOICE] Voz '${voice}' não suportada. Usando voz padrão 'alloy'.`);
+        voice = 'alloy';
+      } else {
+        voice = normalizedVoice;
+      }
+      log(`[VOICE] [OpenAI] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
+      try {
+        const mp3Response = await this.openai.audio.speech.create({
+          model: "gpt-4o-mini-tts",
+          voice: voice,
+          input: text,
+          response_format: "wav", // Formato compatível com aplay
+        });
+        const buffer = Buffer.from(await mp3Response.arrayBuffer());
+        await writeFile(outputPath, buffer);
+        log(`[VOICE] [OpenAI] Áudio TTS gerado com sucesso em: ${outputPath}`);
+        return outputPath;
+      } catch (e) {
+        error(`[VOICE] [OpenAI] Erro ao gerar áudio TTS: ${e.message}`);
+        throw e;
+      }
     } else {
-      voice = normalizedVoice;
-    }
-    
-    log(`[VOICE] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
-    
-    try {
-      const mp3Response = await this.openai.audio.speech.create({
-        model: "gpt-4o-mini-tts",
-        voice: voice,
-        input: text,
-        response_format: "wav", // Formato compatível com aplay
-      });
-
-      const buffer = Buffer.from(await mp3Response.arrayBuffer());
-      await writeFile(outputPath, buffer);
-      
-      log(`[VOICE] Áudio TTS gerado com sucesso em: ${outputPath}`);
-      return outputPath;
-    } catch (e) {
-      error(`[VOICE] Erro ao gerar áudio TTS: ${e.message}`);
-      throw e;
+      // --- SENDEASY TTS (padrão) ---
+      // Configuração do endpoint base
+      const baseUrl = config.sendeasyTTS?.baseUrl || 'http://localhost';
+      const ttsUrl = `${baseUrl}/tts`;
+      log(`[VOICE] [SendEasy] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
+      try {
+        // 1. Enfileira o texto para síntese
+        const ttsRes = await axios.post(ttsUrl, {
+          text,
+          voice,
+          format: 'wav',
+          model: 'kokoro',
+        });
+        const { id, status, download_url } = ttsRes.data;
+        if (!id || !download_url) throw new Error('Resposta inválida do TTS: ' + JSON.stringify(ttsRes.data));
+        // 2. Poll status até ficar 'done' (timeout de 30s)
+        const statusUrl = `${baseUrl}/status/${id}`;
+        let jobStatus = status;
+        let filePath;
+        const started = Date.now();
+        while (jobStatus !== 'done') {
+          if (Date.now() - started > 30000) throw new Error('Timeout aguardando TTS job');
+          await new Promise(r => setTimeout(r, 500));
+          const statusRes = await axios.get(statusUrl);
+          jobStatus = statusRes.data.status;
+          filePath = statusRes.data.filePath;
+          if (jobStatus === 'error') throw new Error('Erro no TTS: ' + (statusRes.data.error || 'desconhecido'));
+        }
+        // 3. Baixa o arquivo de áudio
+        const audioUrl = `${baseUrl}${filePath || download_url}`;
+        const audioRes = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+        await writeFile(outputPath, Buffer.from(audioRes.data));
+        log(`[VOICE] [SendEasy] Áudio TTS gerado com sucesso em: ${outputPath}`);
+        return outputPath;
+      } catch (e) {
+        error(`[VOICE] [SendEasy] Erro ao gerar áudio TTS: ${e.message}`);
+        throw e;
+      }
     }
   }
 
@@ -74,7 +110,7 @@ class VoiceCallProcessor {
    * @returns {Promise<boolean>} true se processado com sucesso
    */
   async processVoiceCall(message) {
-    const { id, number, text, voice } = message;
+    const { id, number, text, voice, ttsProvider } = message;
     log(`[VOICE] Processando chamada ${id} para ${number}`);
     
     if (this.inCall) {
@@ -86,8 +122,8 @@ class VoiceCallProcessor {
     const audioPath = path.join(TMP_DIR, `tts-${id}.wav`);
     
     try {
-      // Passo 1: Gerar o áudio TTS com a voz especificada ou fallback para 'coral'
-      await this.generateSpeech(text, audioPath, voice);
+      // Passo 1: Gerar o áudio TTS com a voz e provider especificados
+      await this.generateSpeech(text, audioPath, voice, ttsProvider);
       
       // Passo 2: Fazer a chamada para o número
       log(`[VOICE] Discando para ${number}...`);
@@ -290,6 +326,60 @@ class VoiceCallProcessor {
     } catch (e) {
       error(`[VOICE] Erro ao desligar chamada: ${e.message}`);
       throw e;
+    }
+  }
+
+  /**
+   * Processa uma chamada de voz usando um arquivo de áudio existente
+   * @param {Object} message - { id, number, fileUrl, voice }
+   * @returns {Promise<boolean>} true se processado com sucesso
+   */
+  async processVoiceFileCall(message) {
+    const { id, number, fileUrl, voice } = message;
+    log(`[VOICE] [FILE] Processando chamada ${id} para ${number} com arquivo: ${fileUrl}`);
+    if (this.inCall) {
+      error(`[VOICE] [FILE] Já existe uma chamada em andamento. Chamada ${id} será adiada.`);
+      return false;
+    }
+    this.inCall = true;
+    // Detect extension
+    const ext = (fileUrl.split('.').pop() || 'wav').toLowerCase();
+    const audioPath = path.join(TMP_DIR, `voicefile-${id}.${ext}`);
+    try {
+      // Baixar o arquivo de áudio
+      log(`[VOICE] [FILE] Baixando arquivo de áudio: ${fileUrl}`);
+      const audioRes = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+      await writeFile(audioPath, Buffer.from(audioRes.data));
+      log(`[VOICE] [FILE] Arquivo de áudio salvo em: ${audioPath}`);
+      // Fazer a chamada
+      log(`[VOICE] [FILE] Discando para ${number}...`);
+      await this.makeCall(number);
+      log(`[VOICE] [FILE] Aguardando 750ms após atendimento...`);
+      await serialManager.delay(750);
+      // Reproduzir o áudio
+      log(`[VOICE] [FILE] Reproduzindo áudio...`);
+      await this.playAudio(audioPath);
+      log(`[VOICE] [FILE] Chamada ${id} concluída com sucesso.`);
+      return true;
+    } catch (e) {
+      error(`[VOICE] [FILE] Erro no processamento da chamada ${id}: ${e.message}`);
+      if (this.inCall) {
+        try {
+          await this.hangupCall();
+        } catch (hangupErr) {
+          error(`[VOICE] [FILE] Erro ao desligar chamada: ${hangupErr.message}`);
+        }
+      }
+      throw e;
+    } finally {
+      this.inCall = false;
+      // Remover o arquivo de áudio temporário
+      try {
+        await unlink(audioPath);
+        log(`[VOICE] [FILE] Arquivo de áudio temporário removido: ${audioPath}`);
+      } catch (unlinkErr) {
+        error(`[VOICE] [FILE] Erro ao remover arquivo temporário: ${unlinkErr.message}`);
+      }
     }
   }
 }

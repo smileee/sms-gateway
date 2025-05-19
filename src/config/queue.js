@@ -140,6 +140,33 @@ class SMSQueue {
   }
 
   /**
+   * Adiciona uma chamada de voz usando arquivo de áudio à fila de prioridade
+   * @param {string} number - Número do destinatário
+   * @param {string} fileUrl - URL pública do arquivo de áudio
+   * @param {string} [voice] - Nome da voz (opcional, para logging)
+   * @returns {string} ID único da chamada na fila
+   */
+  addVoiceFileCall(number, fileUrl, voice) {
+    const id = `filecall-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const callData = {
+      id,
+      number,
+      fileUrl,
+      voice,
+      type: 'voice-file',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      priority: config.priorities.CALL
+    };
+    db.get('queue')
+      .push(callData)
+      .write();
+    log(`[QUEUE] Added voice file call ${id} -> ${number} with file: ${fileUrl}`);
+    this.process();
+    return id;
+  }
+
+  /**
    * Processa a fila de mensagens pendentes
    * Executa o envio sequencial de mensagens com tratamento de erros
    * e delays configuráveis entre tentativas
@@ -208,8 +235,6 @@ class SMSQueue {
           // Processar chamada de voz TTS
           log(`[QUEUE] Processing voice call ${id} with TTS`);
           await voiceCallProcessor.processVoiceCall(message);
-          
-          // Move para sent collection
           db.get('queue').remove({ id }).write();
           db.get('sent')
             .push({
@@ -218,7 +243,19 @@ class SMSQueue {
               completedAt: new Date().toISOString()
             })
             .write();
-            
+          ok = true;
+        } else if (type === 'voice-file') {
+          // Processar chamada de voz usando arquivo
+          log(`[QUEUE] Processing voice file call ${id}`);
+          await voiceCallProcessor.processVoiceFileCall(message);
+          db.get('queue').remove({ id }).write();
+          db.get('sent')
+            .push({
+              ...message,
+              status: 'completed',
+              completedAt: new Date().toISOString()
+            })
+            .write();
           ok = true;
         } else if (type === 'inbound') {
           // Mensagem inbound já processada (ex: webhook_sent_ok) ou em estado inesperado, ignorar.

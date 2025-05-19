@@ -38,7 +38,10 @@ const config = {
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-  }
+  },
+  sendeasyTTS: {
+    baseUrl: 'https://tts.sendeasy.pro',
+  },
 };
 
 module.exports = config; 
