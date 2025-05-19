@@ -171,27 +171,32 @@ app.post('/voice-realtime', async (req, res) => {
  *   -H "x-auth-token: sendeasy-sms-token-2024" \
  *   -d '{ "number": "+5511999999999", "fileUrl": "https://.../audio.mp3" }'
  */
+app.post('/voice-file', express.json({ limit: '20mb' }), async (req, res, next) => {
+  if (req.is('application/json')) {
+    try {
+      const { number, fileUrl, voice } = req.body;
+      if (!number || !fileUrl) {
+        return res.status(400).json({ ok: false, error: 'number and fileUrl required' });
+      }
+      const id = smsQueue.addVoiceFileCall(number, fileUrl, voice);
+      return res.json({ ok: true, id });
+    } catch (e) {
+      error('[ERROR]', e.message);
+      return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+  next(); // pass to next handler if not JSON
+});
+
+// 2. Multipart handler for file upload (multipart/form-data)
 app.post('/voice-file', upload.single('file'), async (req, res) => {
   try {
-    const { number, fileUrl, voice } = req.body;
+    const { number, voice } = req.body;
     const file = req.file;
-    if (!number) {
-      return res.status(400).json({ ok: false, error: 'number required' });
+    if (!number || !file) {
+      return res.status(400).json({ ok: false, error: 'number and file required' });
     }
-    if (!fileUrl && !file) {
-      return res.status(400).json({ ok: false, error: 'fileUrl or file required' });
-    }
-    if (fileUrl && file) {
-      return res.status(400).json({ ok: false, error: 'Use only fileUrl OR file, not both' });
-    }
-    let id;
-    if (file) {
-      // File uploaded: pass local path to queue
-      id = smsQueue.addVoiceFileCall(number, null, voice, file.path);
-    } else {
-      // fileUrl provided: pass as before
-      id = smsQueue.addVoiceFileCall(number, fileUrl, voice);
-    }
+    const id = smsQueue.addVoiceFileCall(number, null, voice, file.path);
     res.json({ ok: true, id });
   } catch (e) {
     error('[ERROR]', e.message);
