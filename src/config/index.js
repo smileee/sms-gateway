@@ -41,6 +41,7 @@ const config = {
   },
   sendeasyTTS: {
     baseUrl: 'https://tts.sendeasy.pro',
+    apiToken: 'SEU_TOKEN_FORTE_AQUI',
   },
 };
 

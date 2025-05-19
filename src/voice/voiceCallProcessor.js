@@ -66,6 +66,8 @@ class VoiceCallProcessor {
       // --- SENDEASY TTS (padrão) ---
       // Configuração do endpoint base
       const baseUrl = config.sendeasyTTS?.baseUrl || 'http://localhost';
+      const apiToken = config.sendeasyTTS?.apiToken;
+      const headers = apiToken ? { 'x-api-token': apiToken } : {};
       const ttsUrl = `${baseUrl}/tts`;
       log(`[VOICE] [SendEasy] Gerando áudio TTS para: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" com voz: ${voice}`);
       try {
@@ -75,7 +77,7 @@ class VoiceCallProcessor {
           voice,
           format: 'wav',
           model: 'kokoro',
-        });
+        }, { headers });
         const { id, status, download_url } = ttsRes.data;
         if (!id || !download_url) throw new Error('Resposta inválida do TTS: ' + JSON.stringify(ttsRes.data));
         // 2. Poll status até ficar 'done' (timeout de 30s)
@@ -86,14 +88,14 @@ class VoiceCallProcessor {
         while (jobStatus !== 'done') {
           if (Date.now() - started > 30000) throw new Error('Timeout aguardando TTS job');
           await new Promise(r => setTimeout(r, 500));
-          const statusRes = await axios.get(statusUrl);
+          const statusRes = await axios.get(statusUrl, { headers });
           jobStatus = statusRes.data.status;
           filePath = statusRes.data.filePath;
           if (jobStatus === 'error') throw new Error('Erro no TTS: ' + (statusRes.data.error || 'desconhecido'));
         }
         // 3. Baixa o arquivo de áudio
         const audioUrl = `${baseUrl}${filePath || download_url}`;
-        const audioRes = await axios.get(audioUrl, { responseType: 'arraybuffer' });
+        const audioRes = await axios.get(audioUrl, { responseType: 'arraybuffer', headers });
         await writeFile(outputPath, Buffer.from(audioRes.data));
         log(`[VOICE] [SendEasy] Áudio TTS gerado com sucesso em: ${outputPath}`);
         return outputPath;
