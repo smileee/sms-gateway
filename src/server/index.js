@@ -8,13 +8,13 @@ const smsEncoder = require('../sms/encoding');
 const serialManager = require('../modem/serial');
 const atManager = require('../modem/commands');
 const multer = require('multer');
-const upload = multer({ dest: 'tmp/' });
+// Set 20MB file size limit for uploads
+const upload = multer({ dest: 'tmp/', limits: { fileSize: 20 * 1024 * 1024 } });
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
 
 // Token authentication middleware
 const AUTH_TOKEN = process.env.AUTH_TOKEN || 'sendeasy-sms-token-2024';
@@ -198,6 +198,10 @@ app.post('/voice-file', upload.single('file'), async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// Now apply JSON and urlencoded parsers for other routes (after /voice-file)
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 /**
  * Endpoint para consulta da fila de mensagens
